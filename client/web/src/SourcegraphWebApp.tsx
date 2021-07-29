@@ -1,6 +1,6 @@
 import 'focus-visible'
 
-import { ApolloProvider } from '@apollo/client'
+import { ApolloClient, ApolloProvider, NormalizedCacheObject } from '@apollo/client'
 import { ShortcutProvider } from '@slimsag/react-shortcuts'
 import ServerIcon from 'mdi-react/ServerIcon'
 import * as React from 'react'
@@ -32,7 +32,7 @@ import {
 } from '@sourcegraph/shared/src/util/useRedesignToggle'
 
 import { authenticatedUser, AuthenticatedUser } from './auth'
-import { client } from './backend/graphql'
+import { getWebGraphQLClient } from './backend/graphql'
 import { BatchChangesProps } from './batches'
 import { CodeIntelligenceProps } from './codeintel'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -127,6 +127,9 @@ interface SourcegraphWebAppState extends SettingsCascadeProps {
 
     /** The currently authenticated user (or null if the viewer is anonymous). */
     authenticatedUser?: AuthenticatedUser | null
+
+    /** GraphQL client initialized asynchronously to restore persisted cache. */
+    graphqlClient?: ApolloClient<NormalizedCacheObject>
 
     viewerSubject: LayoutProps['viewerSubject']
 
@@ -336,6 +339,12 @@ export class SourcegraphWebApp extends React.Component<SourcegraphWebAppProps, S
 
         document.documentElement.classList.add('theme')
 
+        getWebGraphQLClient()
+            .then(graphqlClient => this.setState({ graphqlClient }))
+            .catch(error => {
+                console.error('Error initalizing GraphQL client', error)
+            })
+
         this.subscriptions.add(
             combineLatest([from(this.platformContext.settings), authenticatedUser.pipe(startWith(null))]).subscribe(
                 ([settingsCascade, authenticatedUser]) => {
@@ -495,15 +504,15 @@ export class SourcegraphWebApp extends React.Component<SourcegraphWebAppProps, S
             return <HeroPage icon={ServerIcon} title={`${statusCode}: ${statusText}`} subtitle={subtitle} />
         }
 
-        const { authenticatedUser } = this.state
-        if (authenticatedUser === undefined) {
+        const { authenticatedUser, graphqlClient } = this.state
+        if (authenticatedUser === undefined || graphqlClient === undefined) {
             return null
         }
 
         const { children, ...props } = this.props
 
         return (
-            <ApolloProvider client={client}>
+            <ApolloProvider client={graphqlClient}>
                 <ErrorBoundary location={null}>
                     <ShortcutProvider>
                         <BrowserRouter key={0}>

@@ -1,3 +1,5 @@
+import { LocalStorageWrapper, CachePersistor, PersistentStorage } from '@5stones/apollo3-cache-persist'
+import { PersistedData } from '@5stones/apollo3-cache-persist/lib/types'
 import {
     gql as apolloGql,
     useQuery as useApolloQuery,
@@ -13,6 +15,7 @@ import {
     MutationTuple,
 } from '@apollo/client'
 import { GraphQLError } from 'graphql'
+import { memoize } from 'lodash'
 import { useMemo } from 'react'
 import { Observable } from 'rxjs'
 import { fromFetch } from 'rxjs/fetch'
@@ -22,6 +25,7 @@ import { checkOk } from '../backend/fetch'
 import { createAggregateError } from '../util/errors'
 
 import { cache } from './cache'
+import { persistenceMapper } from './persistenceMapper'
 
 /**
  * Use this template string tag for all GraphQL queries.
@@ -90,15 +94,54 @@ export function requestGraphQLCommon<T, V = object>({
     })
 }
 
-export const graphQLClient = ({ headers }: { headers: RequestInit['headers'] }): ApolloClient<NormalizedCacheObject> =>
-    new ApolloClient({
-        uri: GRAPHQL_URI,
-        cache,
-        link: createHttpLink({
-            uri: ({ operationName }) => `${GRAPHQL_URI}?${operationName}`,
-            headers,
-        }),
-    })
+interface GetGraphqlClientOptions {
+    isAuthenticated: boolean
+    headers: RequestInit['headers']
+}
+
+/**
+ * 🚨 SECURITY: Use two unique keys for authenticated and anonymous users
+ * to avoid keeping private information in localStorage after logout.
+ */
+const getApolloPersistCacheKey = (isAuthenticated: boolean): string =>
+    `apollo-cache-persist-${isAuthenticated ? 'authenticated' : 'anonymous'}`
+
+export const getGraphQLClient = memoize(
+    async (options: GetGraphqlClientOptions): Promise<ApolloClient<NormalizedCacheObject>> => {
+        const { headers, isAuthenticated } = options
+
+        const persistor = new CachePersistor({
+            cache,
+            persistenceMapper,
+            maxSize: false,
+            key: getApolloPersistCacheKey(isAuthenticated),
+            storage: new LocalStorageWrapper(window.localStorage) as PersistentStorage<
+                PersistedData<NormalizedCacheObject>
+            >,
+        })
+
+        // 🚨 SECURITY: Drop persisted cache item in case `isAuthenticated` value changed.
+        localStorage.removeItem(getApolloPersistCacheKey(!isAuthenticated))
+        await persistor.restore()
+
+        return new ApolloClient({
+            uri: GRAPHQL_URI,
+            cache,
+            defaultOptions: {
+                watchQuery: {
+                    fetchPolicy: 'cache-and-network',
+                },
+                query: {
+                    fetchPolicy: 'network-only',
+                },
+            },
+            link: createHttpLink({
+                uri: ({ operationName }) => `${GRAPHQL_URI}?${operationName}`,
+                headers,
+            }),
+        })
+    }
+)
 
 type RequestDocument = string | DocumentNode
 

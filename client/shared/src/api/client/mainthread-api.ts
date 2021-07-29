@@ -220,7 +220,7 @@ export const getConfiguredSideloadedExtension = (baseUrl: string): Observable<Co
 function getEnabledExtensions(
     context: Pick<
         PlatformContext,
-        'settings' | 'requestGraphQL' | 'sideloadedExtensionURL' | 'getScriptURLForExtension'
+        'settings' | 'requestGraphQL' | 'sideloadedExtensionURL' | 'getScriptURLForExtension' | 'getGraphQLClient'
     >
 ): Observable<ConfiguredExtension[]> {
     const sideloadedExtension: Observable<ConfiguredExtension | null> = from(context.sideloadedExtensionURL).pipe(
