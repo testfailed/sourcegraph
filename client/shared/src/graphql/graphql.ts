@@ -1,5 +1,3 @@
-import { LocalStorageWrapper, CachePersistor, PersistentStorage } from '@5stones/apollo3-cache-persist'
-import { PersistedData } from '@5stones/apollo3-cache-persist/lib/types'
 import {
     gql as apolloGql,
     useQuery as useApolloQuery,
@@ -14,6 +12,8 @@ import {
     MutationHookOptions,
     MutationTuple,
 } from '@apollo/client'
+import { LocalStorageWrapper, CachePersistor, PersistentStorage } from 'apollo3-cache-persist'
+import { PersistedData } from 'apollo3-cache-persist/lib/types'
 import { GraphQLError } from 'graphql'
 import { memoize } from 'lodash'
 import { useMemo } from 'react'

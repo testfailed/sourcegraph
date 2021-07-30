@@ -2,11 +2,6 @@
 # yarn lockfile v1
 
 
-"@5stones/apollo3-cache-persist@^0.11.0":
-  version "0.11.0"
-  resolved "https://registry.npmjs.org/@5stones/apollo3-cache-persist/-/apollo3-cache-persist-0.11.0.tgz#973451eb46f8c1db2589f8d4a02de9157ecace1e"
-  integrity sha512-ey8/Bloqiib5ONYo99whTvr7WuMgdBf6nqZsj1gytz3mraZd227Qis40S8ilXfPrfI65K0qShmo6AW3f5EbN6g==
-
 "@actions/core@^1.2.4":
   version "1.2.6"
   resolved "https://registry.npmjs.org/@actions/core/-/core-1.2.6.tgz#a78d49f41a4def18e88ce47c2cac615d5694bf09"
@@ -6520,6 +6515,11 @@ anymatch@^2.0.0:
   dependencies:
     micromatch "^3.1.4"
     normalize-path "^2.1.1"
+
+apollo3-cache-persist@^0.11.0:
+  version "0.11.0"
+  resolved "https://registry.npmjs.org/apollo3-cache-persist/-/apollo3-cache-persist-0.11.0.tgz#08333c0a0c9a6c3accc0078776f1f59719cf67f3"
+  integrity sha512-+3wakfMwDUMtuP7D0cJlwJaeUWIB7qz79+6rv/vyklWO/e1lFcyeHaJmx9pMjwcZrwBkf3KgA+4wQTYPgJHomQ==
 
 app-root-dir@^1.0.2:
   version "1.0.2"
