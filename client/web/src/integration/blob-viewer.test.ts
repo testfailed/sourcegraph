@@ -115,6 +115,7 @@ describe('Blob viewer', () => {
                 ...commonBlobGraphQlResults,
                 ViewerSettings: () => ({
                     viewerSettings: {
+                        __typename: 'SettingsCascade',
                         final: JSON.stringify(userSettings),
                         subjects: [
                             {
@@ -401,6 +402,7 @@ describe('Blob viewer', () => {
                 ...commonBlobGraphQlResults,
                 ViewerSettings: () => ({
                     viewerSettings: {
+                        __typename: 'SettingsCascade',
                         final: JSON.stringify(userSettings),
                         subjects: [
                             {
@@ -663,6 +665,7 @@ describe('Blob viewer', () => {
                     createTreeEntriesResult(repositorySourcegraphUrl, ['README.md', 'test.ts', 'fake.ts']),
                 ViewerSettings: () => ({
                     viewerSettings: {
+                        __typename: 'SettingsCascade',
                         final: JSON.stringify(userSettings),
                         subjects: [
                             {
@@ -837,6 +840,7 @@ describe('Blob viewer', () => {
                 ...commonBlobGraphQlResults,
                 ViewerSettings: () => ({
                     viewerSettings: {
+                        __typename: 'SettingsCascade',
                         final: JSON.stringify(userSettings),
                         subjects: [
                             {

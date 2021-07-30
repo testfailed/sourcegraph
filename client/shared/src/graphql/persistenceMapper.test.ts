@@ -15,6 +15,12 @@ describe('persistenceMapper', () => {
 
     const parseCacheString = (cacheString: string) => JSON.parse(cacheString) as CacheObject
 
+    it('does not persist anything if the cache is empty', async () => {
+        const persistedString = await persistenceMapper(JSON.stringify({}))
+
+        expect(Object.keys(parseCacheString(persistedString))).toEqual([])
+    })
+
     it('persists only hardcoded queries', async () => {
         const persistedString = await persistenceMapper(
             createStringifiedCache({
@@ -24,7 +30,7 @@ describe('persistenceMapper', () => {
             })
         )
 
-        expect(Object.keys(parseCacheString(persistedString).ROOT_QUERY)).toEqual([...QUERIES_TO_PERSIST, '__typename'])
+        expect(Object.keys(parseCacheString(persistedString).ROOT_QUERY)).toEqual(['__typename', ...QUERIES_TO_PERSIST])
     })
 
     it('persists cache references', async () => {

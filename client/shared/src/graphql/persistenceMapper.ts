@@ -22,7 +22,17 @@ export interface CacheObject {
 // Ensures that we persist data required only for `QUERIES_TO_PERSIST`. Everything else is ignored.
 export const persistenceMapper = (data: string): Promise<string> => {
     const initialData = JSON.parse(data) as CacheObject
-    const dataToPersist: Record<string, unknown> = {}
+
+    // If `ROOT_QUERY` cache is empty, return initial data right away.
+    if (!initialData[ROOT_QUERY_KEY] || Object.keys(initialData[ROOT_QUERY_KEY]).length === 0) {
+        return Promise.resolve(data)
+    }
+
+    const dataToPersist: Record<string, unknown> = {
+        [ROOT_QUERY_KEY]: {
+            __typename: initialData[ROOT_QUERY_KEY].__typename,
+        },
+    }
 
     function findNestedCacheReferences(entry: unknown): void {
         if (!entry) {
@@ -45,17 +55,23 @@ export const persistenceMapper = (data: string): Promise<string> => {
         }
     }
 
-    // Add responses of the specified queries to the result object.
-    dataToPersist[ROOT_QUERY_KEY] = pick(initialData[ROOT_QUERY_KEY], [...QUERIES_TO_PERSIST, '__typename'])
-
     /**
-     * Go through nested fields of the persisted responses and add references used there to the result object.
+     * Add responses of the specified queries to the result object and
+     * go through nested fields of the persisted responses and add references used there to the result object.
      *
      * Example ROOT_QUERY: { viewerSettings: { user: { __ref: 'User:01' } }, 'User:01': { ... } }
      * 'User:01' should be persisted, to have a complete cached response to the `viewerSettings` query.
      */
     for (const queryName of QUERIES_TO_PERSIST) {
-        findNestedCacheReferences(initialData[ROOT_QUERY_KEY][queryName])
+        const entryToPersist = initialData[ROOT_QUERY_KEY][queryName]
+
+        if (entryToPersist) {
+            Object.assign(dataToPersist[ROOT_QUERY_KEY], {
+                [queryName]: entryToPersist,
+            })
+
+            findNestedCacheReferences(entryToPersist)
+        }
     }
 
     return Promise.resolve(JSON.stringify(dataToPersist))

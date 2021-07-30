@@ -134,6 +134,7 @@ describe('Extension Registry', () => {
             ...commonWebGraphQlResults,
             ViewerSettings: () => ({
                 viewerSettings: {
+                    __typename: 'SettingsCascade',
                     subjects: [
                         {
                             __typename: 'DefaultSettings',

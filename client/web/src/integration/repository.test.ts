@@ -604,6 +604,7 @@ describe('Repository', () => {
                     ),
                 ViewerSettings: () => ({
                     viewerSettings: {
+                        __typename: 'SettingsCascade',
                         final: JSON.stringify(userSettings),
                         subjects: [
                             {
