@@ -1,5 +1,3 @@
-import { pick } from 'lodash'
-
 import { IQuery } from './schema'
 
 /**
