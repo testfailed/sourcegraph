@@ -193,6 +193,7 @@ describe('Extension Registry', () => {
             }),
             RegistryExtensions: () => ({
                 extensionRegistry: {
+                    __typename: 'ExtensionRegistry',
                     extensions: {
                         error: null,
                         nodes: registryExtensionNodes,
@@ -202,6 +203,7 @@ describe('Extension Registry', () => {
             }),
             Extensions: () => ({
                 extensionRegistry: {
+                    __typename: 'ExtensionRegistry',
                     extensions: {
                         nodes: extensionNodes,
                     },

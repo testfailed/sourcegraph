@@ -219,6 +219,7 @@ describe('Blob viewer', () => {
                 }),
                 Extensions: () => ({
                     extensionRegistry: {
+                        __typename: 'ExtensionRegistry',
                         extensions: {
                             nodes: [
                                 {
@@ -508,6 +509,7 @@ describe('Blob viewer', () => {
                 }),
                 Extensions: () => ({
                     extensionRegistry: {
+                        __typename: 'ExtensionRegistry',
                         extensions: {
                             nodes: mockExtensions.map(mockExtension => ({
                                 ...mockExtension,
@@ -774,6 +776,7 @@ describe('Blob viewer', () => {
                 },
                 Extensions: () => ({
                     extensionRegistry: {
+                        __typename: 'ExtensionRegistry',
                         extensions: {
                             nodes: [
                                 {
@@ -913,6 +916,7 @@ describe('Blob viewer', () => {
                 }),
                 Extensions: () => ({
                     extensionRegistry: {
+                        __typename: 'ExtensionRegistry',
                         extensions: {
                             nodes: [
                                 {

@@ -748,6 +748,7 @@ describe('Repository', () => {
                 },
                 Extensions: () => ({
                     extensionRegistry: {
+                        __typename: 'ExtensionRegistry',
                         extensions: {
                             nodes: [
                                 {
