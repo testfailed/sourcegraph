@@ -6,9 +6,11 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -52,7 +54,7 @@ func (s *JVMPackagesSyncer) Type() string {
 // IsCloneable checks to see if the VCS remote URL is cloneable. Any non-nil
 // error indicates there is a problem.
 func (s *JVMPackagesSyncer) IsCloneable(ctx context.Context, remoteURL *vcs.URL) error {
-	dependencies, err := s.packageDependencies(remoteURL.Path)
+	dependencies, err := s.packageDependencies(ctx, remoteURL.Path)
 	if err != nil {
 		return err
 	}
@@ -95,9 +97,10 @@ func (s *JVMPackagesSyncer) CloneCommand(ctx context.Context, remoteURL *vcs.URL
 	return exec.CommandContext(ctx, "git", "--version"), nil
 }
 
-// Fetch does nothing for Maven packages because they are immutable and cannot be updated after publishing.
+// Fetch adds git tags for newly added dependency versions and removes git tags
+// for deleted deleted versions.
 func (s *JVMPackagesSyncer) Fetch(ctx context.Context, remoteURL *vcs.URL, dir GitDir) error {
-	dependencies, err := s.packageDependencies(remoteURL.Path)
+	dependencies, err := s.packageDependencies(ctx, remoteURL.Path)
 	if err != nil {
 		return err
 	}
@@ -152,23 +155,32 @@ func (s *JVMPackagesSyncer) RemoteShowCommand(ctx context.Context, remoteURL *vc
 // packageDependencies returns the list of JVM dependencies that belong to the given URL path.
 // The returned package dependencies are sorted by semantic versioning.
 // A URL maps to a single JVM package, which may contain multiple versions (one git tag per version).
-func (s *JVMPackagesSyncer) packageDependencies(repoUrlPath string) (dependencies []reposource.MavenDependency, err error) {
+func (s *JVMPackagesSyncer) packageDependencies(ctx context.Context, repoUrlPath string) (dependencies []reposource.MavenDependency, err error) {
 	module, err := reposource.ParseMavenModule(repoUrlPath)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, dependency := range s.MavenDependencies() {
 		if module.MatchesDependencyString(dependency) {
 			dependency, err := reposource.ParseMavenDependency(dependency)
 			if err != nil {
 				return nil, err
 			}
-			dependencies = append(dependencies, dependency)
+
+			if coursier.Exists(ctx, s.Config, dependency) {
+				dependencies = append(dependencies, dependency)
+			}
+			// Silently ignore non-existent dependencies because
+			// they are already logged out in the `GetRepo` method
+			// in internal/repos/jvm_packages.go.
 		}
 	}
+
 	if len(dependencies) == 0 {
-		return nil, errors.Errorf("no tracked dependencies for URL path %s", repoUrlPath)
+		return nil, errors.Errorf("no JVM dependencies for URL path %s", repoUrlPath)
 	}
+
 	reposource.SortDependencies(dependencies)
 	return dependencies, nil
 }
@@ -234,9 +246,8 @@ func (s *JVMPackagesSyncer) gitPushDependencyTag(ctx context.Context, bareGitDir
 // A `*.jar` file works the same way as a `*.zip` file, it can even be uncompressed with the `unzip` command-line tool.
 func (s *JVMPackagesSyncer) commitJar(ctx context.Context, dependency reposource.MavenDependency,
 	workingDirectory, sourceCodeJarPath string, connection *schema.JVMPackagesConnection) error {
-	cmd := exec.CommandContext(ctx, "unzip", sourceCodeJarPath)
-	if _, err := runCommandInDirectory(ctx, cmd, workingDirectory); err != nil {
-		return err
+	if err := unzipJarFile(sourceCodeJarPath, workingDirectory); err != nil {
+		return errors.Wrapf(err, "failed to unzip jar file %v", sourceCodeJarPath)
 	}
 
 	file, err := os.Create(filepath.Join(workingDirectory, "lsif-java.json"))
@@ -264,7 +275,7 @@ func (s *JVMPackagesSyncer) commitJar(ctx context.Context, dependency reposource
 		return err
 	}
 
-	cmd = exec.CommandContext(ctx, "git", "add", ".")
+	cmd := exec.CommandContext(ctx, "git", "add", ".")
 	if _, err := runCommandInDirectory(ctx, cmd, workingDirectory); err != nil {
 		return err
 	}
@@ -277,6 +288,65 @@ func (s *JVMPackagesSyncer) commitJar(ctx context.Context, dependency reposource
 	cmd = exec.CommandContext(ctx, "git", "tag", "-m", dependency.CoursierSyntax(), dependency.GitTagFromVersion())
 	if _, err := runCommandInDirectory(ctx, cmd, workingDirectory); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func unzipJarFile(jarPath, destination string) error {
+	reader, err := zip.OpenReader(jarPath)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	destinationDirectory := strings.TrimSuffix(destination, string(os.PathSeparator)) + string(os.PathSeparator)
+	for _, file := range reader.File {
+		if strings.HasPrefix(file.Name, ".git/") {
+			// For security reasons, don't unzip files under the `.git/`
+			// directory. See https://github.com/sourcegraph/security-issues/issues/163
+			continue
+		}
+		if strings.HasSuffix(file.Name, "/") {
+			// Skip directory entries. Directory entries must end
+			// with a forward slash (even on Windows) according to
+			// `file.Name` docstring.
+			continue
+		}
+		outputPath := path.Join(destination, file.Name)
+		if !strings.HasPrefix(outputPath, destinationDirectory) {
+			// For security reasons, skip file if it's not a child
+			// of the target directory. See "Zip Slip Vulnerability".
+			continue
+		}
+
+		inputFile, err := reader.Open(file.Name)
+		if err != nil {
+			return err
+		}
+
+		if err = os.MkdirAll(path.Dir(outputPath), 0700); err != nil {
+			return err
+		}
+		outputFile, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(outputFile, inputFile)
+		err1 := inputFile.Close()
+		err2 := outputFile.Close()
+
+		if err != nil {
+			return err
+		}
+		if err1 != nil {
+			return err1
+		}
+		if err2 != nil {
+			return err2
+		}
+		return nil
+
 	}
 
 	return nil
