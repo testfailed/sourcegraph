@@ -95,8 +95,8 @@ export function requestGraphQLCommon<T, V = object>({
 }
 
 interface GetGraphqlClientOptions {
-    isAuthenticated: boolean
     headers: RequestInit['headers']
+    isAuthenticated: boolean
 }
 
 /**
