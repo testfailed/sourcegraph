@@ -8,6 +8,7 @@ import { IExtensionRegistry } from './schema'
 // See https://www.apollographql.com/docs/react/caching/cache-configuration/#typepolicy-fields
 const typePolicies: TypedTypePolicies = {
     ExtensionRegistry: {
+        // Replace existing `ExtensionRegistry` with the incoming value. Required because of the missing `id` field.
         merge(existing: IExtensionRegistry, incoming: IExtensionRegistry): IExtensionRegistry {
             return incoming
         },
