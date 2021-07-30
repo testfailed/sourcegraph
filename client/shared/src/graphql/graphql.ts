@@ -128,9 +128,23 @@ export const getGraphQLClient = memoize(
             uri: GRAPHQL_URI,
             cache,
             defaultOptions: {
+                /**
+                 * The default `fetchPolicy` is `cache-first`, which returns a cached response
+                 * and doesn't trigger cache update. This is undesirable default behavior because
+                 * we want to keep our cache updated to avoid confusing the user with stale data.
+                 * `cache-and-network` allows us to return a cached result right away and then update
+                 * all consumers with the fresh data from the network request.
+                 */
                 watchQuery: {
                     fetchPolicy: 'cache-and-network',
                 },
+                /**
+                 * `client.query()` returns promise, so it can only resolve one response.
+                 * Meaning we cannot return the cached result first and then update it with
+                 * the response from the network as it's done in `client.watchQuery()`.
+                 * So we always need to make a network request to get data unless another
+                 * `fetchPolicy` is specified in the `client.query()` call.
+                 */
                 query: {
                     fetchPolicy: 'network-only',
                 },
