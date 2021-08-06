@@ -27,6 +27,14 @@ var docCommand = &ffcli.Command{
 	},
 }
 
+/**
+<!-- sg-doc-mirror begin -->
+<!-- sg-doc-mirror header-level=3 https://github.com/sourcegraph/deploy-sourcegraph/tree/master/overlays -->
+
+hello world
+
+<!-- sg-doc-mirror end -->
+**/
 var docMirrorredMatch = regexp.MustCompile("(?s)(<!-- sg-doc-mirror begin).*(<!-- sg-doc-mirror end -->)")
 
 var (
