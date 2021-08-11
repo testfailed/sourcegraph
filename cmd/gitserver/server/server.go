@@ -115,7 +115,10 @@ type Server struct {
 	DesiredPercentFree int
 
 	// DiskSizer tells how much disk is free and how large the disk is.
-	DiskSizer DiskSizer
+	DiskSizer interface {
+		BytesFreeOnDisk(mountPoint string) (uint64, error)
+		DiskSizeBytes(mountPoint string) (uint64, error)
+	}
 
 	// GetRemoteURLFunc is a function which returns the remote URL for a
 	// repository. This is used when cloning or fetching a repository. In

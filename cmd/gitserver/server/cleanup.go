@@ -315,12 +315,6 @@ func (s *Server) cleanupRepos() {
 	}
 }
 
-// DiskSizer gets information about disk size and free space.
-type DiskSizer interface {
-	BytesFreeOnDisk(mountPoint string) (uint64, error)
-	DiskSizeBytes(mountPoint string) (uint64, error)
-}
-
 // howManyBytesToFree returns the number of bytes that should be freed to make sure
 // there is sufficient disk space free to satisfy s.DesiredPercentFree.
 func (s *Server) howManyBytesToFree() (int64, error) {
