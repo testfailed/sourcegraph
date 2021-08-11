@@ -304,7 +304,7 @@ func (s *Server) cleanupRepos() {
 	}
 
 	if s.DiskSizer == nil {
-		s.DiskSizer = &StatDiskSizer{}
+		s.DiskSizer = &statDiskSizer{}
 	}
 	b, err := s.howManyBytesToFree()
 	if err != nil {
@@ -341,9 +341,9 @@ func (s *Server) howManyBytesToFree() (int64, error) {
 	return howManyBytesToFree, nil
 }
 
-type StatDiskSizer struct{}
+type statDiskSizer struct{}
 
-func (s *StatDiskSizer) BytesFreeOnDisk(mountPoint string) (uint64, error) {
+func (s *statDiskSizer) BytesFreeOnDisk(mountPoint string) (uint64, error) {
 	var fs syscall.Statfs_t
 	if err := syscall.Statfs(mountPoint, &fs); err != nil {
 		return 0, errors.Wrap(err, "statting")
@@ -352,7 +352,7 @@ func (s *StatDiskSizer) BytesFreeOnDisk(mountPoint string) (uint64, error) {
 	return free, nil
 }
 
-func (s *StatDiskSizer) DiskSizeBytes(mountPoint string) (uint64, error) {
+func (s *statDiskSizer) DiskSizeBytes(mountPoint string) (uint64, error) {
 	var fs syscall.Statfs_t
 	if err := syscall.Statfs(mountPoint, &fs); err != nil {
 		return 0, errors.Wrap(err, "statting")
