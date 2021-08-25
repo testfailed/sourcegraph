@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "target": "esnext",
+    "baseUrl": ".",
+    "jsx": "react",
+    "rootDir": ".",
+    "outDir": "out",
+  },
+  "references": [
+     { "path": "../web" },
+  ],
+  "include": ["**/*", ".*", "./src/**/*.json"],
+  "exclude": ["../../node_modules", "./out"],
+}

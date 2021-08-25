@@ -37,7 +37,8 @@ interface FileMatchProps extends SettingsCascadeProps, ThemeProps, TelemetryProp
 }
 
 // Dev flag for disabling syntax highlighting on search results pages.
-const NO_SEARCH_HIGHLIGHTING = localStorage.getItem('noSearchHighlighting') !== null
+const NO_SEARCH_HIGHLIGHTING =
+    typeof localStorage !== 'undefined' && localStorage.getItem('noSearchHighlighting') !== null
 
 export const FileMatchChildren: React.FunctionComponent<FileMatchProps> = props => {
     // If optimizeHighlighting is enabled, compile a list of the highlighted file ranges we want to

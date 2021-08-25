@@ -63,8 +63,10 @@ export const mutateGraphQL = (request: string, variables?: {}): Observable<Graph
 
 export const client = graphQLClient({
     headers: {
-        ...window?.context?.xhrHeaders,
-        'X-Sourcegraph-Should-Trace': new URLSearchParams(window.location.search).get('trace') || 'false',
+        ...(typeof window !== 'undefined' && window?.context?.xhrHeaders),
+        'X-Sourcegraph-Should-Trace':
+            new URLSearchParams(typeof window !== 'undefined' ? window.location.search : undefined).get('trace') ||
+            'false',
         // Note: Do not use getHeaders() here due to a bug that Apollo has duplicating headers with different letter casing. Issue to fix: https://github.com/apollographql/apollo-client/issues/8447
     },
 })

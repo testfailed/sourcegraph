@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "name": "@sourcegraph/render-web",
+  "version": "0.0.1",
+  "description": "Server-side renderer for the Sourcegraph web app",
+  "license": "Apache-2.0",
+  "scripts": {
+    "test": "jest",
+    "eslint": "eslint --cache '**/*.[tj]s?(x)'",
+    "serve": "NODE_TLS_REJECT_UNAUTHORIZED=0 FOO='TODO(sqs) the NODE_TLS_REJECT_UNAUTHORIZED is insecure!' NODE_ENV=development babel-node -x .tsx,.ts,.js,.jsx --ignore ' ' --root-mode upward src/serve.ts"
+  }
+}
+

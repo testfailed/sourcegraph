@@ -14,10 +14,12 @@ import {
     MutationTuple,
     QueryTuple,
 } from '@apollo/client'
+import fetch from 'cross-fetch'
 import { GraphQLError } from 'graphql'
 import { useMemo } from 'react'
 import { Observable } from 'rxjs'
 import { fromFetch } from 'rxjs/fetch'
+import { tap } from 'rxjs/operators'
 import { Omit } from 'utility-types'
 
 import { checkOk } from '../backend/fetch'
@@ -66,7 +68,8 @@ export interface GraphQLRequestOptions extends Omit<RequestInit, 'method' | 'bod
     baseUrl?: string
 }
 
-const GRAPHQL_URI = '/.api/graphql'
+// TODO(sqs): get absolute url for prerender
+const GRAPHQL_URI = 'https://sourcegraph.test:3443/.api/graphql'
 
 /**
  * This function should not be called directly as it does not
@@ -89,7 +92,12 @@ export function requestGraphQLCommon<T, V = object>({
         method: 'POST',
         body: JSON.stringify({ query: request, variables }),
         selector: response => checkOk(response).json(),
-    })
+    }).pipe(
+        tap(
+            () => console.log('GQL:', nameMatch ? nameMatch[1] : 'unknown gql query'),
+            error => console.log('GQL error:', nameMatch ? nameMatch[1] : 'unknown gql query', error)
+        )
+    )
 }
 
 export const graphQLClient = ({ headers }: { headers: RequestInit['headers'] }): ApolloClient<NormalizedCacheObject> =>
@@ -99,6 +107,7 @@ export const graphQLClient = ({ headers }: { headers: RequestInit['headers'] }):
         link: createHttpLink({
             uri: ({ operationName }) => `${GRAPHQL_URI}?${operationName}`,
             headers,
+            fetch,
         }),
     })
 

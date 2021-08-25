@@ -66,11 +66,12 @@ type Metadata struct {
 }
 
 type Common struct {
-	Injected InjectedHTML
-	Metadata *Metadata
-	Context  jscontext.JSContext
-	Title    string
-	Error    *pageError
+	Injected        InjectedHTML
+	Metadata        *Metadata
+	Context         jscontext.JSContext
+	Title           string
+	Error           *pageError
+	PrerenderedHTML template.HTML
 
 	Manifest *assets.WebpackManifest
 
@@ -256,6 +257,25 @@ func newCommon(w http.ResponseWriter, r *http.Request, title string, serveError 
 		common.Metadata.PreviewImage = getBlobPreviewImageURL(envvar.OpenGraphPreviewServiceURL(), r.URL.Path, lineRange)
 		common.Metadata.Description = fmt.Sprintf("%s/%s", globals.ExternalURL(), mux.Vars(r)["Repo"])
 		common.Metadata.Title = getBlobPreviewTitle(blobPath, lineRange, symbolResult)
+	}
+
+	// Prerender.
+	const enablePrerender = true
+	if enablePrerender {
+		start := time.Now()
+		log15.Info("Prerender start", "url", r.URL.RequestURI())
+		presp, err := prerender(r.Context(), prerenderRequest{
+			RequestURI: r.URL.RequestURI(),
+			JSContext:  common.Context,
+		})
+		if err != nil {
+			log15.Error("Prerender failed", "url", r.URL.RequestURI(), "error", err)
+		}
+		if presp != nil {
+			log15.Info("Prerender done", "url", r.URL.RequestURI(), "took", time.Since(start))
+			common.PrerenderedHTML = template.HTML(presp.HTML)
+			//x
+		}
 	}
 
 	return common, nil

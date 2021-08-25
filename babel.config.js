@@ -3,7 +3,28 @@ const logger = require('gulplog')
 const semver = require('semver')
 const path = require('path')
 
-/** @type {import('@babel/core').ConfigFunction} */
+const babelPresetEnvCommonOptions = {
+  bugfixes: true,
+  useBuiltIns: 'entry',
+  include: [
+    // Polyfill URL because Chrome and Firefox are not spec-compliant
+    // Hostnames of URIs with custom schemes (e.g. git) are not parsed out
+    'web.url',
+    // URLSearchParams.prototype.keys() is not iterable in Firefox
+    'web.url-search-params',
+    // Commonly needed by extensions (used by vscode-jsonrpc)
+    'web.immediate',
+    // Always define Symbol.observable before libraries are loaded, ensuring interopability between different libraries.
+    'esnext.symbol.observable',
+    // Webpack v4 chokes on optional chaining and nullish coalescing syntax, fix will be released with webpack v5.
+    '@babel/plugin-proposal-optional-chaining',
+    '@babel/plugin-proposal-nullish-coalescing-operator',
+  ],
+  // See https://github.com/zloirock/core-js#babelpreset-env
+  corejs: semver.minVersion(require('./package.json').dependencies['core-js']),
+}
+
+/** @type {import('@babel/core').ConfigFunction & { babelPresetEnvCommonOptions: object }} */
 module.exports = api => {
   const isTest = api.env('test')
   api.cache.forever()
@@ -26,24 +47,7 @@ module.exports = api => {
         {
           // Node (used for testing) doesn't support modules, so compile to CommonJS for testing.
           modules: isTest ? 'commonjs' : false,
-          bugfixes: true,
-          useBuiltIns: 'entry',
-          include: [
-            // Polyfill URL because Chrome and Firefox are not spec-compliant
-            // Hostnames of URIs with custom schemes (e.g. git) are not parsed out
-            'web.url',
-            // URLSearchParams.prototype.keys() is not iterable in Firefox
-            'web.url-search-params',
-            // Commonly needed by extensions (used by vscode-jsonrpc)
-            'web.immediate',
-            // Always define Symbol.observable before libraries are loaded, ensuring interopability between different libraries.
-            'esnext.symbol.observable',
-            // Webpack v4 chokes on optional chaining and nullish coalescing syntax, fix will be released with webpack v5.
-            '@babel/plugin-proposal-optional-chaining',
-            '@babel/plugin-proposal-nullish-coalescing-operator',
-          ],
-          // See https://github.com/zloirock/core-js#babelpreset-env
-          corejs: semver.minVersion(require('./package.json').dependencies['core-js']),
+          ...babelPresetEnvCommonOptions,
         },
       ],
       '@babel/preset-typescript',
@@ -54,3 +58,5 @@ module.exports = api => {
     ignore: [new RegExp('d3-array/src/cumsum.js')],
   }
 }
+
+module.exports.babelPresetEnvCommonOptions = babelPresetEnvCommonOptions

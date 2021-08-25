@@ -13,6 +13,7 @@ import { CurrentAuthStateResult } from './graphql-operations'
  * in, sign out, and account changes all require a full-page reload in the browser to take effect.
  */
 export const authenticatedUser = new ReplaySubject<AuthenticatedUser | null>(1)
+export let authenticatedUserLET: AuthenticatedUser | null = null
 
 export type AuthenticatedUser = NonNullable<CurrentAuthStateResult['currentUser']>
 
@@ -20,6 +21,7 @@ export type AuthenticatedUser = NonNullable<CurrentAuthStateResult['currentUser'
  * Fetches the current user, orgs, and config state from the remote. Emits no items, completes when done.
  */
 export function refreshAuthenticatedUser(): Observable<never> {
+    console.log('authenticatedUser')
     return requestGraphQL<CurrentAuthStateResult>(gql`
         query CurrentAuthState {
             currentUser {
@@ -52,8 +54,12 @@ export function refreshAuthenticatedUser(): Observable<never> {
         }
     `).pipe(
         map(dataOrThrowErrors),
-        tap(data => authenticatedUser.next(data.currentUser)),
-        catchError(() => {
+        tap(data => {
+            authenticatedUser.next(data.currentUser)
+            authenticatedUserLET = data.currentUser
+        }),
+        catchError(error => {
+            console.log('AU error:', error)
             authenticatedUser.next(null)
             return []
         }),
@@ -73,7 +79,7 @@ export function refreshAuthenticatedUser(): Observable<never> {
 export const authRequired = authenticatedUser.pipe(map(user => user === null && !window.context?.sourcegraphDotComMode))
 
 // Populate authenticatedUser.
-if (window.context?.isAuthenticatedUser) {
+if (typeof window !== 'undefined' && window.context?.isAuthenticatedUser) {
     refreshAuthenticatedUser()
         .toPromise()
         .then(

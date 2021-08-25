@@ -13,7 +13,8 @@ export const getCSSLoaders = (
     ...loaders: RuleSetUseItem[]
 ): RuleSetUseItem[] => [
     // Use style-loader for local development as it is significantly faster.
-    isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
+    // TODO(sqs): trying to avoid FOUC,
+    /* isDevelopment ? 'style-loader' :*/ MiniCssExtractPlugin.loader,
     ...loaders,
     'postcss-loader',
     {
