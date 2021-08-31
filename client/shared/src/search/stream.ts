@@ -1,11 +1,13 @@
 /* eslint-disable id-length */
 import { Observable, fromEvent, Subscription, OperatorFunction, pipe, Subscriber, Notification } from 'rxjs'
-import { defaultIfEmpty, map, materialize, scan } from 'rxjs/operators'
+import { defaultIfEmpty, map, materialize, scan, switchMap } from 'rxjs/operators'
 import { AggregableBadge } from 'sourcegraph'
 
 import { asError, ErrorLike, isErrorLike } from '@sourcegraph/shared/src/util/errors'
 
+import { observeTransformedSearchQuery } from '../api/client/search'
 import { displayRepoName } from '../components/RepoFileLink'
+import { Controller as ExtensionsController } from '../extensions/controller'
 import { SearchPatternType } from '../graphql-operations'
 import { SymbolKind } from '../graphql/schema'
 
@@ -375,6 +377,7 @@ export interface StreamSearchOptions {
     caseSensitive: boolean
     versionContext: string | undefined
     trace: string | undefined
+    extensionsController: Pick<ExtensionsController, 'extHostAPI'>
 }
 
 /**
@@ -390,34 +393,41 @@ function search({
     caseSensitive,
     versionContext,
     trace,
+    extensionsController,
 }: StreamSearchOptions): Observable<SearchEvent> {
-    return new Observable<SearchEvent>(observer => {
-        const parameters = [
-            ['q', `${query} ${caseSensitive ? 'case:yes' : ''}`],
-            ['v', version],
-            ['t', patternType as string],
-            ['display', '1500'],
-        ]
-        if (versionContext) {
-            parameters.push(['vc', versionContext])
-        }
-        if (trace) {
-            parameters.push(['trace', trace])
-        }
-        const parameterEncoded = parameters.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&')
+    return observeTransformedSearchQuery({ query, extensionsController }).pipe(
+        switchMap(
+            query =>
+                new Observable<SearchEvent>(observer => {
+                    console.log({ query })
+                    const parameters = [
+                        ['q', `${query} ${caseSensitive ? 'case:yes' : ''}`],
+                        ['v', version],
+                        ['t', patternType as string],
+                        ['display', '1500'],
+                    ]
+                    if (versionContext) {
+                        parameters.push(['vc', versionContext])
+                    }
+                    if (trace) {
+                        parameters.push(['trace', trace])
+                    }
+                    const parameterEncoded = parameters.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&')
 
-        const eventSource = new EventSource('/search/stream?' + parameterEncoded)
-        const subscriptions = new Subscription()
-        for (const [eventType, handleMessages] of Object.entries(messageHandlers)) {
-            subscriptions.add(
-                (handleMessages as MessageHandler)(eventType as SearchEvent['type'], eventSource, observer)
-            )
-        }
-        return () => {
-            subscriptions.unsubscribe()
-            eventSource.close()
-        }
-    })
+                    const eventSource = new EventSource('/search/stream?' + parameterEncoded)
+                    const subscriptions = new Subscription()
+                    for (const [eventType, handleMessages] of Object.entries(messageHandlers)) {
+                        subscriptions.add(
+                            (handleMessages as MessageHandler)(eventType as SearchEvent['type'], eventSource, observer)
+                        )
+                    }
+                    return () => {
+                        subscriptions.unsubscribe()
+                        eventSource.close()
+                    }
+                })
+        )
+    )
 }
 
 /** Initiate a streaming search and aggregate the results */

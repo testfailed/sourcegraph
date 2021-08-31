@@ -127,8 +127,18 @@ export const StreamingSearchResults: React.FunctionComponent<StreamingSearchResu
                     caseSensitive,
                     versionContext: resolveVersionContext(versionContext, availableVersionContexts),
                     trace,
+                    extensionsController: props.extensionsController,
                 }).pipe(throttleTime(500, undefined, { leading: true, trailing: true })),
-            [streamSearch, query, patternType, caseSensitive, versionContext, availableVersionContexts, trace]
+            [
+                streamSearch,
+                query,
+                patternType,
+                caseSensitive,
+                versionContext,
+                availableVersionContexts,
+                trace,
+                props.extensionsController,
+            ]
         )
     )
 
