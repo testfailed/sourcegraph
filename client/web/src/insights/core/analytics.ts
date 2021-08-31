@@ -10,6 +10,7 @@ import {
 import { TelemetryService } from '@sourcegraph/shared/src/telemetry/telemetryService'
 
 import { Settings } from '../../schema/settings.schema'
+import { CodeInsightsPings } from '../telemetry-values'
 
 import { INSIGHTS_ALL_REPOS_SETTINGS_KEY, InsightTypePrefix } from './types'
 import { isLangStatsdInsightId } from './types/insight/lang-stat-insight'
@@ -40,7 +41,7 @@ export function logCodeInsightsCount(
             const newGroupedInsights = getInsightsGroupedByType(newSettings)
 
             if (!isEqual(oldGroupedInsights, newGroupedInsights)) {
-                telemetryService.log('InsightsGroupedCount', newGroupedInsights, newGroupedInsights)
+                telemetryService.log(CodeInsightsPings.InsightsGroupedCount, newGroupedInsights, newGroupedInsights)
             }
         }
     } catch {
@@ -62,7 +63,11 @@ export function logSearchBasedInsightStepSize(
             const newGroupedStepSizes = getGroupedStepSizes(newSettings.final)
 
             if (!isEqual(oldGroupedStepSizes, newGroupedStepSizes)) {
-                telemetryService.log('InsightsGroupedStepSizes', newGroupedStepSizes, newGroupedStepSizes)
+                telemetryService.log(
+                    CodeInsightsPings.InsightsGroupedStepSizes,
+                    newGroupedStepSizes,
+                    newGroupedStepSizes
+                )
             }
         }
     } catch {
