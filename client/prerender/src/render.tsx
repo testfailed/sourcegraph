@@ -33,37 +33,36 @@ export const render = async ({ requestURI, jscontext }: RenderRequest): Promise<
     const history = createMemoryHistory({})
     const url = new URL(requestURI, 'https://example.com')
     history.location = { pathname: url.pathname, search: url.search, hash: url.hash, state: undefined }
-    const e = (
+    const app = (
         // TODO(sqs): wrap in <React.StrictMode>
         <StaticRouter location={requestURI} context={routerContext}>
             <EnterpriseWebApp history={history} />
         </StaticRouter>
     )
     // TODO(sqs): figure out how many times to iterate async
-    /*     ReactDOMServer.renderToString(e)
-    await new Promise(resolve => setTimeout(resolve, 1))
+    ReactDOMServer.renderToString(app)
     await new Promise(resolve => setTimeout(resolve))
     await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(e)
-    await new Promise(resolve => setTimeout(resolve, 250))
+    ReactDOMServer.renderToString(app)
+    /* await new Promise(resolve => setTimeout(resolve, 250))
     await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(e)
+    ReactDOMServer.renderToString(app)
     await new Promise(resolve => setTimeout(resolve, 50))
     await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(e)
+    ReactDOMServer.renderToString(app)
     await new Promise(resolve => setTimeout(resolve, 100))
     await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(e)
+    ReactDOMServer.renderToString(app)
     await new Promise(resolve => setTimeout(resolve, 50))
     await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(e)
+    ReactDOMServer.renderToString(app)
     await new Promise(resolve => setTimeout(resolve, 50))
     await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(e)
+    ReactDOMServer.renderToString(app)
     await new Promise(resolve => setTimeout(resolve, 50))
     await new Promise(resolve => setTimeout(resolve))
  */
-    const html = ReactDOMServer.renderToString(e)
+    const html = ReactDOMServer.renderToString(app)
 
     return {
         html,

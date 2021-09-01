@@ -1,28 +1,36 @@
 const EventListener = { addEventListener: () => null, removeEventListener: () => null }
-global.window = {
-    navigator: { platform: '', userAgent: '' },
-    location: {},
-    dispatchEvent: () => {},
-    context: require('./jscontext').JSCONTEXT,
-    matchMedia: () => ({ matches: false, ...EventListener }),
+global.window = global
+global.navigator = { platform: '', userAgent: '' }
+global.location = {}
+global.dispatchEvent = () => {}
+global.context = require('./jscontext').JSCONTEXT
+global.matchMedia = () => ({
+    // TODO(sqs): hack, this is only used by the theme code so this means the default is dark theme
+    matches: true,
     ...EventListener,
-}
+})
+global.addEventListener = EventListener.addEventListener
+global.removeEventListener = EventListener.removeEventListener
+
 global.localStorage = {
     getItem: () => null,
     setItem: () => {},
     removeItem: () => {},
 }
+const ELEMENT = {
+    setAttribute: () => {},
+    classList: {
+        add: () => {},
+    },
+    style: {},
+    append: () => {},
+}
 global.document = {
     querySelector: () => null,
     createEvent: () => ({ initCustomEvent: () => {}, ...EventListener }),
-    documentElement: {
-        setAttribute: () => {},
-        classList: {
-            add: () => {},
-        },
-        style: {},
-    },
-    createElement: () => null,
+    documentElement: ELEMENT,
+    createElement: () => ELEMENT,
+    head: ELEMENT,
     ...EventListener,
 }
 global.Node = {}
