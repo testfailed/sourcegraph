@@ -1,6 +1,9 @@
 /// <reference types="react/experimental" />
 /// <reference types="react-dom/experimental" />
 
+import './browserEnv'
+
+import { createMemoryHistory } from 'history'
 import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import { StaticRouter } from 'react-router'
@@ -27,15 +30,18 @@ export const render = async ({ requestURI, jscontext }: RenderRequest): Promise<
     global.window.context.PRERENDER = true
 
     const routerContext: { url?: string } = {}
+    const history = createMemoryHistory({})
+    const url = new URL(requestURI, 'https://example.com')
+    history.location = { pathname: url.pathname, search: url.search, hash: url.hash, state: undefined }
     const e = (
         // TODO(sqs): wrap in <React.StrictMode>
         <StaticRouter location={requestURI} context={routerContext}>
-            <EnterpriseWebApp />
+            <EnterpriseWebApp history={history} />
         </StaticRouter>
     )
     // TODO(sqs): figure out how many times to iterate async
-    ReactDOMServer.renderToString(e)
-    await new Promise(resolve => setTimeout(resolve))
+    /*     ReactDOMServer.renderToString(e)
+    await new Promise(resolve => setTimeout(resolve, 1))
     await new Promise(resolve => setTimeout(resolve))
     await new Promise(resolve => setTimeout(resolve))
     ReactDOMServer.renderToString(e)
@@ -56,10 +62,21 @@ export const render = async ({ requestURI, jscontext }: RenderRequest): Promise<
     ReactDOMServer.renderToString(e)
     await new Promise(resolve => setTimeout(resolve, 50))
     await new Promise(resolve => setTimeout(resolve))
+ */
     const html = ReactDOMServer.renderToString(e)
 
     return {
         html,
         redirectURL: routerContext.url,
     }
+}
+
+if (false) {
+    render({ requestURI: '/', jscontext: {} })
+        .then(response => console.log('ZZ', response))
+        .catch(error => console.error('Error:', error))
+        .finally(() => {
+            console.log('EXIT111')
+            process.exit(0)
+        })
 }

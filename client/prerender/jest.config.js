@@ -6,7 +6,7 @@ const config = require('../../jest.config.base')
 /** @type {import('@jest/types').Config.InitialOptions} */
 const exportedConfig = {
   ...config,
-  displayName: 'render-web',
+  displayName: 'prerender',
   rootDir: __dirname,
   setupFiles: [
     ...config.setupFiles,

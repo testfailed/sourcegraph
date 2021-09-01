@@ -214,7 +214,6 @@
     "autoprefixer": "^10.2.1",
     "babel-jest": "^25.5.1",
     "babel-loader": "^8.2.2",
-    "babel-plugin-css-modules-transform": "^1.6.2",
     "babel-plugin-lodash": "^3.3.4",
     "babel-preset-react-app": "^10.0.0",
     "browserslist": "^4.12.0",

@@ -7,6 +7,7 @@ import '@sourcegraph/shared/src/polyfills'
 
 import '../sentry'
 
+import { createBrowserHistory } from 'history'
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { BrowserRouter } from 'react-router-dom'
@@ -21,14 +22,16 @@ const root = document.querySelector('#root')!
 
 const jsx = (
     <BrowserRouter>
-        <EnterpriseWebApp />
+        <EnterpriseWebApp history={createBrowserHistory()} />
     </BrowserRouter>
 )
 
-const hydrate = root.hasChildNodes()
-if (hydrate) {
-    ReactDOM.hydrateRoot(root, jsx)
-} else {
-    ReactDOM.createRoot(root).render(jsx)
+if (!location.search.includes('noscript')) {
+    const hydrate = root.hasChildNodes()
+    if (hydrate) {
+        ReactDOM.hydrateRoot(root, jsx)
+    } else {
+        ReactDOM.createRoot(root).render(jsx)
+    }
 }
 // })

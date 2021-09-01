@@ -2,7 +2,7 @@ import 'focus-visible'
 
 import { ApolloProvider } from '@apollo/client'
 import { ShortcutProvider } from '@slimsag/react-shortcuts'
-import { createBrowserHistory } from 'history'
+import { History } from 'history'
 import ServerIcon from 'mdi-react/ServerIcon'
 import * as React from 'react'
 import { Route, Router } from 'react-router'
@@ -121,6 +121,7 @@ export interface SourcegraphWebAppProps extends CodeIntelligenceProps, BatchChan
     repoSettingsAreaRoutes: readonly RepoSettingsAreaRoute[]
     repoSettingsSidebarGroups: readonly RepoSettingsSideBarGroup[]
     routes: readonly LayoutRouteProps<any>[]
+    history: History
 }
 
 interface SourcegraphWebAppState extends SettingsCascadeProps {
@@ -258,8 +259,6 @@ setLinkComponent(RouterLinkOrAnchor)
 
 const LayoutWithActivation = window.context.sourcegraphDotComMode ? Layout : withActivation(Layout)
 
-const history = createBrowserHistory()
-
 /**
  * The root component.
  */
@@ -278,8 +277,8 @@ export class SourcegraphWebApp extends React.Component<SourcegraphWebAppProps, S
         this.subscriptions.add(
             combineLatest([
                 getEnabledExtensions(this.platformContext),
-                observeLocation(history).pipe(
-                    startWith(location),
+                observeLocation(props.history).pipe(
+                    startWith(props.history.location),
                     map(location => getModeFromPath(location.pathname)),
                     distinctUntilChanged()
                 ),
@@ -523,7 +522,7 @@ export class SourcegraphWebApp extends React.Component<SourcegraphWebAppProps, S
                 <ErrorBoundary location={null}>
                     <ShortcutProvider>
                         <TemporarySettingsProvider authenticatedUser={authenticatedUser}>
-                            <Router history={history} key={0}>
+                            <div className="TODO was Router, to avoid big diff" key={0}>
                                 <Route
                                     path="/"
                                     render={routeComponentProps => (
@@ -598,7 +597,7 @@ export class SourcegraphWebApp extends React.Component<SourcegraphWebAppProps, S
                                         </CodeHostScopeProvider>
                                     )}
                                 />
-                            </Router>
+                            </div>
                             <Tooltip key={1} />
                             <Notifications
                                 key={2}

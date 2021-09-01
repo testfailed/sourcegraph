@@ -1,3 +1,4 @@
+import { History } from 'history'
 import React from 'react'
 
 import { extensionAreaHeaderNavItems } from './extensions/extension/extensionAreaHeaderNavItems'
@@ -24,7 +25,7 @@ import { userSettingsSideBarItems } from './user/settings/sidebaritems'
 
 // Entry point for the app without enterprise functionality.
 // For more info see: https://docs.sourcegraph.com/admin/subscriptions#paid-subscriptions-for-sourcegraph-enterprise
-export const OpenSourceWebApp: React.FunctionComponent = () => (
+export const OpenSourceWebApp: React.FunctionComponent<{ history: History }> = ({ history }) => (
     <SourcegraphWebApp
         extensionAreaRoutes={extensionAreaRoutes}
         extensionAreaHeaderNavItems={extensionAreaHeaderNavItems}
@@ -48,5 +49,6 @@ export const OpenSourceWebApp: React.FunctionComponent = () => (
         keyboardShortcuts={KEYBOARD_SHORTCUTS}
         codeIntelligenceEnabled={false}
         batchChangesEnabled={false}
+        history={history}
     />
 )

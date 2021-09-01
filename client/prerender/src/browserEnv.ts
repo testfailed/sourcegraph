@@ -38,3 +38,11 @@ global.Element = {
 window.Element = global.Element
 global.self = { ...window, close: () => {} }
 global.fetch = require('cross-fetch')
+
+import crypto from 'crypto'
+
+Object.defineProperty(global.self, 'crypto', {
+    value: {
+        subtle: crypto.webcrypto.subtle,
+    },
+})

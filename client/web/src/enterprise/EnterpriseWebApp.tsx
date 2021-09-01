@@ -1,3 +1,4 @@
+import { History } from 'history'
 import React from 'react'
 
 import '../SourcegraphWebApp.scss'
@@ -24,7 +25,7 @@ import { enterpriseUserAreaRoutes } from './user/routes'
 import { enterpriseUserSettingsAreaRoutes } from './user/settings/routes'
 import { enterpriseUserSettingsSideBarItems } from './user/settings/sidebaritems'
 
-export const EnterpriseWebApp: React.FunctionComponent = () => (
+export const EnterpriseWebApp: React.FunctionComponent<{ history: History }> = ({ history }) => (
     <SourcegraphWebApp
         extensionAreaRoutes={enterpriseExtensionAreaRoutes}
         extensionAreaHeaderNavItems={enterpriseExtensionAreaHeaderNavItems}
@@ -48,5 +49,6 @@ export const EnterpriseWebApp: React.FunctionComponent = () => (
         keyboardShortcuts={KEYBOARD_SHORTCUTS}
         codeIntelligenceEnabled={true}
         batchChangesEnabled={window.context.batchChangesEnabled}
+        history={history}
     />
 )

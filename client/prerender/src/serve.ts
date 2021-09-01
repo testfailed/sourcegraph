@@ -6,8 +6,6 @@ import { isErrorLike } from '@sourcegraph/shared/src/util/errors'
 
 import { render, RenderRequest, RenderResponse } from './render'
 
-// TODO(sqs): rename this project from render-web to prerender? align with what's in the Go ui package.
-
 const port = process.env.PORT || 3190
 
 const wrappedRender = async (request: RenderRequest): Promise<RenderResponse> => {
