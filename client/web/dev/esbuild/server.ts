@@ -40,7 +40,7 @@ export const esbuildDevelopmentServer = async (): Promise<void> => {
                         path: request.url!.slice(assetPathPrefix.length - 1),
                     },
                     proxyResponse => {
-                        const isCacheableChunk = path.basename(request.url!).startsWith('chunk-')
+                        const isCacheableChunk = path.basename(request.url!).startsWith('chunk-') || true
 
                         response.writeHead(proxyResponse.statusCode!, {
                             ...proxyResponse.headers,
