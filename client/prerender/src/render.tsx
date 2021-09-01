@@ -44,26 +44,27 @@ export const render = async ({ requestURI, jscontext }: RenderRequest): Promise<
     await new Promise(resolve => setTimeout(resolve))
     await new Promise(resolve => setTimeout(resolve))
     ReactDOMServer.renderToString(app)
-    /* await new Promise(resolve => setTimeout(resolve, 250))
+    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise(resolve => setTimeout(resolve))
+    ReactDOMServer.renderToString(app)
+    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise(resolve => setTimeout(resolve))
+    ReactDOMServer.renderToString(app)
+    await new Promise(resolve => setTimeout(resolve))
+    await new Promise(resolve => setTimeout(resolve))
+    /* await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise(resolve => setTimeout(resolve)) */
+    /* ReactDOMServer.renderToString(app)
+    await new Promise(resolve => setTimeout(resolve, 50))
     await new Promise(resolve => setTimeout(resolve))
     ReactDOMServer.renderToString(app)
     await new Promise(resolve => setTimeout(resolve, 50))
     await new Promise(resolve => setTimeout(resolve))
     ReactDOMServer.renderToString(app)
-    await new Promise(resolve => setTimeout(resolve, 100))
-    await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(app)
-    await new Promise(resolve => setTimeout(resolve, 50))
-    await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(app)
-    await new Promise(resolve => setTimeout(resolve, 50))
-    await new Promise(resolve => setTimeout(resolve))
-    ReactDOMServer.renderToString(app)
-    await new Promise(resolve => setTimeout(resolve, 50))
-    await new Promise(resolve => setTimeout(resolve))
- */
-    const html = ReactDOMServer.renderToString(app)
+    await new Promise(resolve => setTimeout(resolve, 51))
+    await new Promise(resolve => setTimeout(resolve)) */
 
+    const html = ReactDOMServer.renderToString(app)
     return {
         html,
         redirectURL: routerContext.url,

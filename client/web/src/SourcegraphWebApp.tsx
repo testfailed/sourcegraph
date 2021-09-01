@@ -306,6 +306,9 @@ export class SourcegraphWebApp extends React.Component<SourcegraphWebAppProps, S
             featureFlags: new Map<FeatureFlagName, boolean>(),
             authenticatedUser: authenticatedUserLET,
         }
+
+        // HACK(sqs)
+        setTimeout(() => this.componentDidMount(), 200)
     }
 
     public componentDidMount(): void {
@@ -316,19 +319,20 @@ export class SourcegraphWebApp extends React.Component<SourcegraphWebAppProps, S
         this.subscriptions.add(
             combineLatest([from(this.platformContext.settings), authenticatedUser.pipe(startWith(null))]).subscribe(
                 ([settingsCascade, authenticatedUser]) => {
-                    this.setState(state => ({
+                    // TODO(sqs): callback form of this.setState doesn't work server-side
+                    this.setState({
                         settingsCascade,
                         authenticatedUser,
                         ...experimentalFeaturesFromSettings(settingsCascade),
                         globbing: globbingEnabledFromSettings(settingsCascade),
                         searchCaseSensitivity:
-                            defaultCaseSensitiveFromSettings(settingsCascade) || state.searchCaseSensitivity,
-                        searchPatternType: defaultPatternTypeFromSettings(settingsCascade) || state.searchPatternType,
+                            defaultCaseSensitiveFromSettings(settingsCascade) || this.state.searchCaseSensitivity,
+                        searchPatternType:
+                            defaultPatternTypeFromSettings(settingsCascade) || this.state.searchPatternType,
                         viewerSubject: viewerSubjectFromSettings(settingsCascade, authenticatedUser),
-                    }))
+                    })
                 },
                 error => {
-                    console.log('EEE', error)
                     this.setState({ authenticatedUser: null })
                 }
             )
@@ -455,16 +459,12 @@ export class SourcegraphWebApp extends React.Component<SourcegraphWebAppProps, S
         }
 
         const { authenticatedUser } = this.state
-        console.log('REnder AU', authenticatedUser)
         if (authenticatedUser === undefined) {
-            /* if (!window.context.PRERENDER) {
-                return null
-            } */
-            // authenticatedUser = null
             return null
         }
 
         const { children, ...props } = this.props
+        console.log('XXX', this.state.settingsCascade)
 
         return (
             <ApolloProvider client={client}>

@@ -94,7 +94,7 @@ export function requestGraphQLCommon<T, V = object>({
         selector: response => checkOk(response).json(),
     }).pipe(
         tap(
-            () => console.log('GQL:', nameMatch ? nameMatch[1] : 'unknown gql query'),
+            x => console.log('GQL:', nameMatch ? nameMatch[1] : 'unknown gql query', x),
             error => console.log('GQL error:', nameMatch ? nameMatch[1] : 'unknown gql query', error)
         )
     )

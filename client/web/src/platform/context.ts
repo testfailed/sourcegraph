@@ -1,5 +1,5 @@
 import { concat, Observable, ReplaySubject } from 'rxjs'
-import { map, publishReplay, refCount } from 'rxjs/operators'
+import { tap, map, publishReplay, refCount } from 'rxjs/operators'
 
 import { Tooltip } from '@sourcegraph/branded/src/components/tooltip/Tooltip'
 import { createExtensionHost } from '@sourcegraph/shared/src/api/extension/worker'
@@ -29,7 +29,12 @@ import { eventLogger } from '../tracking/eventLogger'
 export function createPlatformContext(): PlatformContext {
     const updatedSettings = new ReplaySubject<GQL.ISettingsCascade>(1)
     const context: PlatformContext = {
-        settings: concat(fetchViewerSettings(), updatedSettings).pipe(map(gqlToCascade), publishReplay(1), refCount()),
+        settings: concat(fetchViewerSettings(), updatedSettings).pipe(
+            map(gqlToCascade),
+            publishReplay(1),
+            refCount(),
+            tap(x => console.log('CS', x))
+        ),
         updateSettings: async (subject, edit) => {
             // Unauthenticated users can't update settings. (In the browser extension, they can update client
             // settings even when not authenticated. The difference in behavior in the web app vs. browser

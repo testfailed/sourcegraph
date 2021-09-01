@@ -93,6 +93,7 @@ function newServer(): {
                 if (!current.kill()) {
                     reject(new Error('kill() failed'))
                 }
+                current = undefined
             } else {
                 resolve()
             }
