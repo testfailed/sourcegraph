@@ -31,6 +31,7 @@ const TemporalRepogroupPage = lazyComponent(() => import('./repogroups/Temporal'
 const O3deRepogroupPage = lazyComponent(() => import('./repogroups/o3de'), 'O3deRepogroupPage')
 const StanfordRepogroupPage = lazyComponent(() => import('./repogroups/Stanford'), 'StanfordRepogroupPage')
 const CncfRepogroupPage = lazyComponent(() => import('./repogroups/cncf'), 'CncfRepogroupPage')
+const InsightsPage = lazyComponent(() => import('./insights/InsightsRouter'), 'InsightsRouter')
 
 export interface LayoutRouteComponentProps<RouteParameters extends { [K in keyof RouteParameters]?: string }>
     extends RouteComponentProps<RouteParameters>,
@@ -202,7 +203,7 @@ export const routes: readonly LayoutRouteProps<any>[] = [
     },
     {
         path: '/insights',
-        render: lazyComponent(() => import('./insights/InsightsRouter'), 'InsightsRouter'),
+        render: props => <InsightsPage {...props} />,
         condition: props =>
             !isErrorLike(props.settingsCascade.final) &&
             !!props.settingsCascade.final?.experimentalFeatures?.codeInsights &&

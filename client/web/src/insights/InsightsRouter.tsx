@@ -11,8 +11,10 @@ import { TelemetryProps } from '@sourcegraph/shared/src/telemetry/telemetryServi
 import { AuthenticatedUser } from '../auth'
 import { withAuthenticatedUser } from '../auth/withAuthenticatedUser'
 import { HeroPage } from '../components/HeroPage'
+import { SearchBoxProps } from '../search/input/SearchBox'
 import { lazyComponent } from '../util/lazyComponent'
 
+import { InsightsContext } from './insights-context'
 import { DashboardsRoutes } from './pages/dashboards/DasbhoardsRoutes'
 import { CreationRoutes } from './pages/insights/creation/CreationRoutes'
 
@@ -32,7 +34,8 @@ export interface InsightsRouterProps
     extends SettingsCascadeProps,
         PlatformContextProps,
         TelemetryProps,
-        ExtensionsControllerProps {
+        ExtensionsControllerProps,
+        Omit<SearchBoxProps, 'queryState' | 'onChange' | 'onSubmit' | 'isSearchOnboardingTourVisible'> {
     /**
      * Authenticated user info, Used to decide where code insight will appears
      * in personal dashboard (private) or in organisation dashboard (public)
@@ -44,44 +47,60 @@ export interface InsightsRouterProps
  * Main Insight routing component. Main entry point to code insights UI.
  */
 export const InsightsRouter = withAuthenticatedUser<InsightsRouterProps>(props => {
-    const { platformContext, settingsCascade, telemetryService, extensionsController, authenticatedUser } = props
+    const {
+        platformContext,
+        settingsCascade,
+        telemetryService,
+        extensionsController,
+        authenticatedUser,
+        ...rest
+    } = props
+
+    const searchBoxProps = {
+        authenticatedUser,
+        settingsCascade,
+        telemetryService,
+        ...rest,
+    }
 
     const match = useRouteMatch()
 
     return (
-        <Switch>
-            <Redirect from={match.url} exact={true} to={`${match.url}/dashboards/all`} />
+        <InsightsContext.Provider value={{ searchBoxProps }}>
+            <Switch>
+                <Redirect from={match.url} exact={true} to={`${match.url}/dashboards/all`} />
 
-            <Route path={`${match.url}/create`}>
-                <CreationRoutes
-                    platformContext={platformContext}
-                    authenticatedUser={authenticatedUser}
-                    settingsCascade={settingsCascade}
-                    telemetryService={telemetryService}
-                />
-            </Route>
-
-            <Route
-                path={`${match.url}/edit/:insightID`}
-                render={(props: RouteComponentProps<{ insightID: string }>) => (
-                    <EditInsightLazyPage
+                <Route path={`${match.url}/create`}>
+                    <CreationRoutes
                         platformContext={platformContext}
                         authenticatedUser={authenticatedUser}
                         settingsCascade={settingsCascade}
-                        insightID={props.match.params.insightID}
+                        telemetryService={telemetryService}
                     />
-                )}
-            />
+                </Route>
 
-            <DashboardsRoutes
-                authenticatedUser={authenticatedUser}
-                telemetryService={telemetryService}
-                extensionsController={extensionsController}
-                platformContext={platformContext}
-                settingsCascade={settingsCascade}
-            />
+                <Route
+                    path={`${match.url}/edit/:insightID`}
+                    render={(props: RouteComponentProps<{ insightID: string }>) => (
+                        <EditInsightLazyPage
+                            platformContext={platformContext}
+                            authenticatedUser={authenticatedUser}
+                            settingsCascade={settingsCascade}
+                            insightID={props.match.params.insightID}
+                        />
+                    )}
+                />
 
-            <Route component={NotFoundPage} key="hardcoded-key" />
-        </Switch>
+                <DashboardsRoutes
+                    authenticatedUser={authenticatedUser}
+                    telemetryService={telemetryService}
+                    extensionsController={extensionsController}
+                    platformContext={platformContext}
+                    settingsCascade={settingsCascade}
+                />
+
+                <Route component={NotFoundPage} key="hardcoded-key" />
+            </Switch>
+        </InsightsContext.Provider>
     )
 })
