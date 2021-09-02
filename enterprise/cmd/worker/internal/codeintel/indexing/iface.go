@@ -3,6 +3,7 @@ package indexing
 import (
 	"context"
 	"regexp"
+	"time"
 
 	"github.com/sourcegraph/sourcegraph/enterprise/internal/codeintel/stores/dbstore"
 	"github.com/sourcegraph/sourcegraph/internal/api"
@@ -21,6 +22,7 @@ type DBStore interface {
 	GetUploadByID(ctx context.Context, id int) (dbstore.Upload, bool, error)
 	ReferencesForUpload(ctx context.Context, uploadID int) (dbstore.PackageReferenceScanner, error)
 	InsertCloneableDependencyRepo(ctx context.Context, dependency precise.Package) (bool, error)
+	InsertDependencyIndexingQueueingJob(ctx context.Context, uploadID int, externalServiceKind string, syncTime *time.Time) (int, error)
 }
 
 type DBStoreShim struct {
