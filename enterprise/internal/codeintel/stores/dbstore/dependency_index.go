@@ -231,7 +231,7 @@ func (s *Store) InsertDependencyIndexingQueueingJob(ctx context.Context, uploadI
 
 const insertDependencyIndexingQueueingJobQuery = `
 -- source: enterprise/internal/codeintel/stores/dbstore/dependency_index.go:InsertDependencyIndexingSubJob
-INSERT INTO lsif_dependency_indexing_queueing_jobs (upload_id, external_service_kind, after_sync_time)
+INSERT INTO lsif_dependency_indexing_queueing_jobs (upload_id, external_service_kind, external_service_sync)
 VALUES (%s, %s, %s)
 RETURNING id
 `

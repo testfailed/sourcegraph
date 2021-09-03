@@ -6,6 +6,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/go-multierror"
+	"github.com/inconshreveable/log15"
 
 	"github.com/sourcegraph/sourcegraph/enterprise/internal/codeintel/stores/dbstore"
 	"github.com/sourcegraph/sourcegraph/internal/actor"
@@ -33,6 +34,7 @@ func NewDependencyIndexingScheduler(
 		dbStore:       dbStore,
 		extsvcStore:   externalServiceStore,
 		indexEnqueuer: enqueuer,
+		workerStore:   workerStore,
 	}
 
 	return dbworker.NewWorker(rootContext, workerStore, handler, workerutil.WorkerOptions{
@@ -64,6 +66,8 @@ func (h *dependencyIndexingSchedulerHandler) Handle(ctx context.Context, record 
 
 	job := record.(dbstore.DependencyIndexingQueueingJob)
 
+	log15.Info("GOT NEW INDEXING QUEUEING JOB", "kind", job.ExternalServiceKind, "id", job.ID)
+
 	shouldIndex, err := h.shouldIndexDependencies(ctx, h.dbStore, job.UploadID)
 	if err != nil {
 		return errors.Wrap(err, "indexing.shouldIndexDependencies")
@@ -86,7 +90,9 @@ func (h *dependencyIndexingSchedulerHandler) Handle(ctx context.Context, record 
 	}
 
 	for _, externalService := range externalServices {
+		log15.Info("EXT SVC TIME", "extsvc", externalService.LastSyncAt, "jobtime", job.ExternalServiceSync, "unsynced", externalService.LastSyncAt.Before(job.ExternalServiceSync))
 		if externalService.LastSyncAt.Before(job.ExternalServiceSync) {
+			log15.Info("REQUEUEING")
 			return h.workerStore.Requeue(ctx, job.ID, time.Now().Add(time.Second*10))
 		}
 	}

@@ -30,6 +30,7 @@ func NewDependencySyncScheduler(
 	dbStore DBStore,
 	workerStore dbworkerstore.Store,
 	externalServiceStore ExternalServiceStore,
+	metrics workerutil.WorkerMetrics,
 ) *workerutil.Worker {
 	rootContext := actor.WithActor(context.Background(), &actor.Actor{Internal: true})
 
@@ -39,7 +40,13 @@ func NewDependencySyncScheduler(
 		extsvcStore: externalServiceStore,
 	}
 
-	return dbworker.NewWorker(rootContext, workerStore, handler, workerutil.WorkerOptions{})
+	return dbworker.NewWorker(rootContext, workerStore, handler, workerutil.WorkerOptions{
+		Name:              "precise_code_intel_dependency_sync_scheduler_worker",
+		NumHandlers:       1,
+		Interval:          time.Second * 5,
+		HeartbeatInterval: 1 * time.Second,
+		Metrics:           metrics,
+	})
 }
 
 type dependencySyncSchedulerHandler struct {
@@ -50,6 +57,8 @@ type dependencySyncSchedulerHandler struct {
 
 func (h *dependencySyncSchedulerHandler) Handle(ctx context.Context, record workerutil.Record) error {
 	job := record.(dbstore.DependencyIndexingJob)
+
+	log15.Info("GOT NEW INDEXING JOB")
 
 	scanner, err := h.dbStore.ReferencesForUpload(ctx, job.UploadID)
 	if err != nil {
@@ -62,7 +71,7 @@ func (h *dependencySyncSchedulerHandler) Handle(ctx context.Context, record work
 	}()
 
 	var (
-		kinds                      []string
+		kinds                      = map[string]struct{}{}
 		oldDependencyReposInserted int
 		newDependencyReposInserted int
 	)
@@ -84,6 +93,7 @@ func (h *dependencySyncSchedulerHandler) Handle(ctx context.Context, record work
 		}
 
 		extsvcKind, ok := schemeToExternalService[packageReference.Scheme]
+		kinds[extsvcKind] = struct{}{}
 		if !ok {
 			continue
 		}
@@ -96,10 +106,6 @@ func (h *dependencySyncSchedulerHandler) Handle(ctx context.Context, record work
 		} else {
 			oldDependencyReposInserted++
 		}
-
-		if !kindExists(kinds, extsvcKind) {
-			kinds = append(kinds, extsvcKind)
-		}
 	}
 
 	var nextSync *time.Time
@@ -107,7 +113,7 @@ func (h *dependencySyncSchedulerHandler) Handle(ctx context.Context, record work
 	if len(kinds) > 0 {
 		nextSync = timePtr(time.Now())
 		externalServices, err := h.extsvcStore.List(ctx, database.ExternalServicesListOptions{
-			Kinds: kinds,
+			Kinds: kindsToArray(kinds),
 		})
 		if err != nil {
 			if len(errs) == 0 {
@@ -135,7 +141,7 @@ func (h *dependencySyncSchedulerHandler) Handle(ctx context.Context, record work
 
 	// append empty kind as queueing jobs are partitioned on extsvc kind, and we want queueing jobs for
 	// uploads not associated with explicitly syncing an external service e.g. Go uploads
-	for _, kind := range append(kinds, "") {
+	for kind := range kinds {
 		if _, err := h.dbStore.InsertDependencyIndexingQueueingJob(ctx, job.UploadID, kind, nextSync); err != nil {
 			errs = append(errs, errors.Wrap(err, "dbstore.InsertDependencyIndexingQueueingJob"))
 		}
@@ -168,3 +174,12 @@ func (h *dependencySyncSchedulerHandler) insertDependencyRepo(ctx context.Contex
 }
 
 func timePtr(t time.Time) *time.Time { return &t }
+
+func kindsToArray(k map[string]struct{}) (s []string) {
+	for kind := range k {
+		if kind != "" {
+			s = append(s, kind)
+		}
+	}
+	return
+}

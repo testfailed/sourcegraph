@@ -103,7 +103,7 @@ const DependencyIndexingQueueingJobMaxNumResets = 3
 var dependencyIndexingQueueingJobWorkerStoreOptions = dbworkerstore.Options{
 	Name:              "codeintel_dependency_index_queueing",
 	TableName:         "lsif_dependency_indexing_queueing_jobs j",
-	ColumnExpressions: dependencyIndexingJobColumns,
+	ColumnExpressions: dependencyIndexingQueueingJobColumns,
 	Scan:              scanFirstDependencyIndexingQueueingJobRecord,
 	OrderByExpression: sqlf.Sprintf("j.queued_at, j.upload_id"),
 	StalledMaxAge:     StalledDependencyIndexingQueueingJobMaxAge,
@@ -111,5 +111,5 @@ var dependencyIndexingQueueingJobWorkerStoreOptions = dbworkerstore.Options{
 }
 
 func WorkerutilDependencyIndexQueueingStore(s basestore.ShareableStore, observationContext *observation.Context) dbworkerstore.Store {
-	return dbworkerstore.NewWithMetrics(s.Handle(), dependencyIndexingJobWorkerStoreOptions, observationContext)
+	return dbworkerstore.NewWithMetrics(s.Handle(), dependencyIndexingQueueingJobWorkerStoreOptions, observationContext)
 }
