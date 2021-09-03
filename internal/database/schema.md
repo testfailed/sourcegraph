@@ -993,6 +993,17 @@ Stores metadata about a code intel index job.
 
 **root**: The working directory of the indexer image relative to the repository root.
 
+# Table "public.lsif_last_retention_scan"
+```
+         Column         |           Type           | Collation | Nullable | Default 
+------------------------+--------------------------+-----------+----------+---------
+ repository_id          | integer                  |           | not null | 
+ last_retention_scan_at | timestamp with time zone |           | not null | 
+Indexes:
+    "lsif_last_retention_scan_pkey" PRIMARY KEY, btree (repository_id)
+
+```
+
 # Table "public.lsif_nearest_uploads"
 ```
     Column     |  Type   | Collation | Nullable | Default 
@@ -1137,6 +1148,9 @@ Stores the retention policy of code intellience data for a repository.
  worker_hostname        | text                     |           | not null | ''::text
  last_heartbeat_at      | timestamp with time zone |           |          | 
  execution_logs         | json[]                   |           |          | 
+ expired                | boolean                  |           | not null | false
+ num_references         | integer                  |           |          | 
+ last_retention_scan_at | timestamp with time zone |           |          | 
 Indexes:
     "lsif_uploads_pkey" PRIMARY KEY, btree (id)
     "lsif_uploads_repository_id_commit_root_indexer" UNIQUE, btree (repository_id, commit, root, indexer) WHERE state = 'completed'::text
@@ -1158,11 +1172,17 @@ Stores metadata about an LSIF index uploaded by a user.
 
 **commit**: A 40-char revhash. Note that this commit may not be resolvable in the future.
 
+**expired**: Whether or not this upload data is no longer protected by any data retention policy.
+
 **id**: Used as a logical foreign key with the (disjoint) codeintel database.
 
 **indexer**: The name of the indexer that produced the index file. If not supplied by the user it will be pulled from the index metadata.
 
+**last_retention_scan_at**: The last time this upload was checked against data retention policies.
+
 **num_parts**: The number of parts src-cli split the upload file into.
+
+**num_references**: The number of references to this upload data from other upload records (via lsif_references).
 
 **root**: The path for which the index can resolve code intelligence relative to the repository root.
 
@@ -2075,26 +2095,28 @@ Triggers:
 
 # View "public.lsif_dumps"
 ```
-       Column        |           Type           | Collation | Nullable | Default 
----------------------+--------------------------+-----------+----------+---------
- id                  | integer                  |           |          | 
- commit              | text                     |           |          | 
- root                | text                     |           |          | 
- uploaded_at         | timestamp with time zone |           |          | 
- state               | text                     |           |          | 
- failure_message     | text                     |           |          | 
- started_at          | timestamp with time zone |           |          | 
- finished_at         | timestamp with time zone |           |          | 
- repository_id       | integer                  |           |          | 
- indexer             | text                     |           |          | 
- num_parts           | integer                  |           |          | 
- uploaded_parts      | integer[]                |           |          | 
- process_after       | timestamp with time zone |           |          | 
- num_resets          | integer                  |           |          | 
- upload_size         | bigint                   |           |          | 
- num_failures        | integer                  |           |          | 
- associated_index_id | bigint                   |           |          | 
- processed_at        | timestamp with time zone |           |          | 
+         Column         |           Type           | Collation | Nullable | Default 
+------------------------+--------------------------+-----------+----------+---------
+ id                     | integer                  |           |          | 
+ commit                 | text                     |           |          | 
+ root                   | text                     |           |          | 
+ uploaded_at            | timestamp with time zone |           |          | 
+ state                  | text                     |           |          | 
+ failure_message        | text                     |           |          | 
+ started_at             | timestamp with time zone |           |          | 
+ finished_at            | timestamp with time zone |           |          | 
+ repository_id          | integer                  |           |          | 
+ indexer                | text                     |           |          | 
+ num_parts              | integer                  |           |          | 
+ uploaded_parts         | integer[]                |           |          | 
+ process_after          | timestamp with time zone |           |          | 
+ num_resets             | integer                  |           |          | 
+ upload_size            | bigint                   |           |          | 
+ num_failures           | integer                  |           |          | 
+ associated_index_id    | bigint                   |           |          | 
+ expired                | boolean                  |           |          | 
+ last_retention_scan_at | timestamp with time zone |           |          | 
+ processed_at           | timestamp with time zone |           |          | 
 
 ```
 
@@ -2118,6 +2140,8 @@ Triggers:
     u.upload_size,
     u.num_failures,
     u.associated_index_id,
+    u.expired,
+    u.last_retention_scan_at,
     u.finished_at AS processed_at
    FROM lsif_uploads u
   WHERE ((u.state = 'completed'::text) OR (u.state = 'deleting'::text));
@@ -2125,27 +2149,29 @@ Triggers:
 
 # View "public.lsif_dumps_with_repository_name"
 ```
-       Column        |           Type           | Collation | Nullable | Default 
----------------------+--------------------------+-----------+----------+---------
- id                  | integer                  |           |          | 
- commit              | text                     |           |          | 
- root                | text                     |           |          | 
- uploaded_at         | timestamp with time zone |           |          | 
- state               | text                     |           |          | 
- failure_message     | text                     |           |          | 
- started_at          | timestamp with time zone |           |          | 
- finished_at         | timestamp with time zone |           |          | 
- repository_id       | integer                  |           |          | 
- indexer             | text                     |           |          | 
- num_parts           | integer                  |           |          | 
- uploaded_parts      | integer[]                |           |          | 
- process_after       | timestamp with time zone |           |          | 
- num_resets          | integer                  |           |          | 
- upload_size         | bigint                   |           |          | 
- num_failures        | integer                  |           |          | 
- associated_index_id | bigint                   |           |          | 
- processed_at        | timestamp with time zone |           |          | 
- repository_name     | citext                   |           |          | 
+         Column         |           Type           | Collation | Nullable | Default 
+------------------------+--------------------------+-----------+----------+---------
+ id                     | integer                  |           |          | 
+ commit                 | text                     |           |          | 
+ root                   | text                     |           |          | 
+ uploaded_at            | timestamp with time zone |           |          | 
+ state                  | text                     |           |          | 
+ failure_message        | text                     |           |          | 
+ started_at             | timestamp with time zone |           |          | 
+ finished_at            | timestamp with time zone |           |          | 
+ repository_id          | integer                  |           |          | 
+ indexer                | text                     |           |          | 
+ num_parts              | integer                  |           |          | 
+ uploaded_parts         | integer[]                |           |          | 
+ process_after          | timestamp with time zone |           |          | 
+ num_resets             | integer                  |           |          | 
+ upload_size            | bigint                   |           |          | 
+ num_failures           | integer                  |           |          | 
+ associated_index_id    | bigint                   |           |          | 
+ expired                | boolean                  |           |          | 
+ last_retention_scan_at | timestamp with time zone |           |          | 
+ processed_at           | timestamp with time zone |           |          | 
+ repository_name        | citext                   |           |          | 
 
 ```
 
@@ -2169,6 +2195,8 @@ Triggers:
     u.upload_size,
     u.num_failures,
     u.associated_index_id,
+    u.expired,
+    u.last_retention_scan_at,
     u.processed_at,
     r.name AS repository_name
    FROM (lsif_dumps u
@@ -2233,26 +2261,28 @@ Triggers:
 
 # View "public.lsif_uploads_with_repository_name"
 ```
-       Column        |           Type           | Collation | Nullable | Default 
----------------------+--------------------------+-----------+----------+---------
- id                  | integer                  |           |          | 
- commit              | text                     |           |          | 
- root                | text                     |           |          | 
- uploaded_at         | timestamp with time zone |           |          | 
- state               | text                     |           |          | 
- failure_message     | text                     |           |          | 
- started_at          | timestamp with time zone |           |          | 
- finished_at         | timestamp with time zone |           |          | 
- repository_id       | integer                  |           |          | 
- indexer             | text                     |           |          | 
- num_parts           | integer                  |           |          | 
- uploaded_parts      | integer[]                |           |          | 
- process_after       | timestamp with time zone |           |          | 
- num_resets          | integer                  |           |          | 
- upload_size         | bigint                   |           |          | 
- num_failures        | integer                  |           |          | 
- associated_index_id | bigint                   |           |          | 
- repository_name     | citext                   |           |          | 
+         Column         |           Type           | Collation | Nullable | Default 
+------------------------+--------------------------+-----------+----------+---------
+ id                     | integer                  |           |          | 
+ commit                 | text                     |           |          | 
+ root                   | text                     |           |          | 
+ uploaded_at            | timestamp with time zone |           |          | 
+ state                  | text                     |           |          | 
+ failure_message        | text                     |           |          | 
+ started_at             | timestamp with time zone |           |          | 
+ finished_at            | timestamp with time zone |           |          | 
+ repository_id          | integer                  |           |          | 
+ indexer                | text                     |           |          | 
+ num_parts              | integer                  |           |          | 
+ uploaded_parts         | integer[]                |           |          | 
+ process_after          | timestamp with time zone |           |          | 
+ num_resets             | integer                  |           |          | 
+ upload_size            | bigint                   |           |          | 
+ num_failures           | integer                  |           |          | 
+ associated_index_id    | bigint                   |           |          | 
+ expired                | boolean                  |           |          | 
+ last_retention_scan_at | timestamp with time zone |           |          | 
+ repository_name        | citext                   |           |          | 
 
 ```
 
@@ -2276,6 +2306,8 @@ Triggers:
     u.upload_size,
     u.num_failures,
     u.associated_index_id,
+    u.expired,
+    u.last_retention_scan_at,
     r.name AS repository_name
    FROM (lsif_uploads u
      JOIN repo r ON ((r.id = u.repository_id)))

@@ -191,7 +191,7 @@ func (s *IndexEnqueuer) inferIndexJobsFromRepositoryStructure(ctx context.Contex
 	}
 
 	if len(indexes) > s.config.MaximumIndexJobsPerInferredConfiguration {
-		log15.Info("Too many inferred roots. Scheduling no index jobs for repository.", "repository_id", repositoryID)
+		log15.Debug("Too many inferred roots. Scheduling no index jobs for repository.", "repository_id", repositoryID)
 		return nil, nil
 	}
 
