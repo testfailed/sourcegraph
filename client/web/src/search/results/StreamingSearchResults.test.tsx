@@ -11,6 +11,7 @@ import { VirtualList } from '@sourcegraph/shared/src/components/VirtualList'
 import { SearchPatternType } from '@sourcegraph/shared/src/graphql-operations'
 import * as GQL from '@sourcegraph/shared/src/graphql/schema'
 import { AggregateStreamingSearchResults } from '@sourcegraph/shared/src/search/stream'
+import { MockedTestProvider } from '@sourcegraph/shared/src/testing/apollo'
 import { NOOP_TELEMETRY_SERVICE } from '@sourcegraph/shared/src/telemetry/telemetryService'
 import {
     extensionsController,
@@ -29,6 +30,8 @@ import { StreamingProgress } from './progress/StreamingProgress'
 import { SearchResultsInfoBar } from './SearchResultsInfoBar'
 import { StreamingSearchResults, StreamingSearchResultsProps } from './StreamingSearchResults'
 import { VersionContextWarning } from './VersionContextWarning'
+import { getDocumentNode } from '@sourcegraph/shared/src/graphql/graphql'
+import { GIT_REVS_QUERY } from './sidebar/Revisions'
 
 describe('StreamingSearchResults', () => {
     const history = createBrowserHistory()
@@ -73,15 +76,17 @@ describe('StreamingSearchResults', () => {
 
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults
-                    {...defaultProps}
-                    parsedSearchQuery="r:golang/oauth2 test f:travis"
-                    patternType={SearchPatternType.regexp}
-                    caseSensitive={true}
-                    versionContext="test"
-                    streamSearch={searchSpy}
-                    availableVersionContexts={[{ name: 'test', revisions: [] }]}
-                />
+                <MockedTestProvider>
+                    <StreamingSearchResults
+                        {...defaultProps}
+                        parsedSearchQuery="r:golang/oauth2 test f:travis"
+                        patternType={SearchPatternType.regexp}
+                        caseSensitive={true}
+                        versionContext="test"
+                        streamSearch={searchSpy}
+                        availableVersionContexts={[{ name: 'test', revisions: [] }]}
+                    />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -106,15 +111,17 @@ describe('StreamingSearchResults', () => {
 
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults
-                    {...defaultProps}
-                    parsedSearchQuery="r:golang/oauth2 test f:travis"
-                    patternType={SearchPatternType.regexp}
-                    caseSensitive={false}
-                    versionContext="test"
-                    streamSearch={searchSpy}
-                    availableVersionContexts={[{ name: 'something', revisions: [] }]}
-                />
+                <MockedTestProvider>
+                    <StreamingSearchResults
+                        {...defaultProps}
+                        parsedSearchQuery="r:golang/oauth2 test f:travis"
+                        patternType={SearchPatternType.regexp}
+                        caseSensitive={false}
+                        versionContext="test"
+                        streamSearch={searchSpy}
+                        availableVersionContexts={[{ name: 'something', revisions: [] }]}
+                    />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -134,7 +141,9 @@ describe('StreamingSearchResults', () => {
     it('should render progress with data from API', () => {
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults {...defaultProps} />
+                <MockedTestProvider>
+                    <StreamingSearchResults {...defaultProps} />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -147,7 +156,9 @@ describe('StreamingSearchResults', () => {
     it('should expand and collapse results when event from infobar is triggered', () => {
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults {...defaultProps} />
+                <MockedTestProvider>
+                    <StreamingSearchResults {...defaultProps} />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -181,16 +192,18 @@ describe('StreamingSearchResults', () => {
 
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults
-                    {...defaultProps}
-                    history={history}
-                    location={history.location}
-                    previousVersionContext={null}
-                    availableVersionContexts={[
-                        { name: 'test', revisions: [] },
-                        { name: 'other', revisions: [] },
-                    ]}
-                />
+                <MockedTestProvider>
+                    <StreamingSearchResults
+                        {...defaultProps}
+                        history={history}
+                        location={history.location}
+                        previousVersionContext={null}
+                        availableVersionContexts={[
+                            { name: 'test', revisions: [] },
+                            { name: 'other', revisions: [] },
+                        ]}
+                    />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -206,16 +219,18 @@ describe('StreamingSearchResults', () => {
 
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults
-                    {...defaultProps}
-                    history={history}
-                    location={history.location}
-                    previousVersionContext={null}
-                    availableVersionContexts={[
-                        { name: 'test', revisions: [] },
-                        { name: 'other', revisions: [] },
-                    ]}
-                />
+                <MockedTestProvider>
+                    <StreamingSearchResults
+                        {...defaultProps}
+                        history={history}
+                        location={history.location}
+                        previousVersionContext={null}
+                        availableVersionContexts={[
+                            { name: 'test', revisions: [] },
+                            { name: 'other', revisions: [] },
+                        ]}
+                    />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -232,7 +247,9 @@ describe('StreamingSearchResults', () => {
         }
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults {...defaultProps} streamSearch={() => of(results)} />
+                <MockedTestProvider>
+                    <StreamingSearchResults {...defaultProps} streamSearch={() => of(results)} />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -256,7 +273,9 @@ describe('StreamingSearchResults', () => {
 
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults {...defaultProps} telemetryService={telemetryService} />
+                <MockedTestProvider>
+                    <StreamingSearchResults {...defaultProps} telemetryService={telemetryService} />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -276,7 +295,9 @@ describe('StreamingSearchResults', () => {
 
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults {...defaultProps} telemetryService={telemetryService} />
+                <MockedTestProvider>
+                    <StreamingSearchResults {...defaultProps} telemetryService={telemetryService} />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -291,7 +312,9 @@ describe('StreamingSearchResults', () => {
     it('should not show saved search modal on first load', () => {
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults {...defaultProps} />
+                <MockedTestProvider>
+                    <StreamingSearchResults {...defaultProps} />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -302,7 +325,9 @@ describe('StreamingSearchResults', () => {
     it('should open saved search modal when triggering event from infobar', () => {
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults {...defaultProps} />
+                <MockedTestProvider>
+                    <StreamingSearchResults {...defaultProps} />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -317,7 +342,9 @@ describe('StreamingSearchResults', () => {
     it('should close saved search modal if close event triggers', () => {
         const element = mount(
             <BrowserRouter>
-                <StreamingSearchResults {...defaultProps} />
+                <MockedTestProvider>
+                    <StreamingSearchResults {...defaultProps} />
+                </MockedTestProvider>
             </BrowserRouter>
         )
 
@@ -355,7 +382,9 @@ describe('StreamingSearchResults', () => {
         for (const [index, test] of tests.entries()) {
             const element = mount(
                 <BrowserRouter>
-                    <StreamingSearchResults {...defaultProps} parsedSearchQuery={test.parsedSearchQuery} />
+                    <MockedTestProvider>
+                        <StreamingSearchResults {...defaultProps} parsedSearchQuery={test.parsedSearchQuery} />
+                    </MockedTestProvider>
                 </BrowserRouter>
             )
 
