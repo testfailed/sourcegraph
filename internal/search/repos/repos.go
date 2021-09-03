@@ -34,18 +34,15 @@ import (
 )
 
 type Resolved struct {
-	RepoRevs []*search.RepositoryRevisions
-
-	// Perf improvement: we precompute this map during repo resolution to save time
-	// on the critical path.
-	RepoSet         map[api.RepoID]types.RepoName
-	MissingRepoRevs []*search.RepositoryRevisions
-	ExcludedRepos   ExcludedRepos
-	OverLimit       bool
+	Repos         []types.RepoName
+	Revs          map[search.RevisionSpecifier][]types.RepoName
+	MissingRevs   map[search.RevisionSpecifier][]types.RepoName
+	ExcludedRepos ExcludedRepos
+	OverLimit     bool
 }
 
 func (r *Resolved) String() string {
-	return fmt.Sprintf("Resolved{RepoRevs=%d, MissingRepoRevs=%d, OverLimit=%v, %#v}", len(r.RepoRevs), len(r.MissingRepoRevs), r.OverLimit, r.ExcludedRepos)
+	return fmt.Sprintf("Resolved{Repos=%d, Revs=%d, MissingRevs=%d, OverLimit=%v, %#v}", len(r.Repos), len(r.Revs), len(r.MissingRevs), r.OverLimit, r.ExcludedRepos)
 }
 
 type Resolver struct {
@@ -197,9 +194,12 @@ func (r *Resolver) Resolve(ctx context.Context, op search.RepoOptions) (Resolved
 			return Resolved{}, err
 		}
 	}
+
 	overLimit := len(repos) > limit
-	repoRevs := make([]*search.RepositoryRevisions, 0, len(repos))
-	var missingRepoRevs []*search.RepositoryRevisions
+	var revs []search.RevisionSpecifier
+	revRepos := make(map[search.RevisionSpecifier][]types.RepoName)
+	missingRevRepos := make(map[search.RevisionSpecifier][]types.RepoName)
+
 	tr.LazyPrintf("Associate/validate revs - start")
 
 	// For auto-defined search contexts we only search the main branch
@@ -209,60 +209,33 @@ func (r *Resolver) Resolve(ctx context.Context, op search.RepoOptions) (Resolved
 		if err != nil {
 			return Resolved{}, err
 		}
+		for _, repositoryRevisions := range searchContextRepositoryRevisions {
+			revs = append(revs, repositoryRevisions.Revs...)
+		}
 	}
-	repoSet := make(map[api.RepoID]types.RepoName, len(repos))
 
-	for _, repo := range repos {
-		var repoRev search.RepositoryRevisions
-		var revs []search.RevisionSpecifier
-		// versionContext will be nil if the Query contains revision specifiers
-		if versionContext != nil {
-			for _, vcRepoRev := range versionContext.Revisions {
-				if vcRepoRev.Repo == string(repo.Name) {
-					repoRev.Repo = repo
-					revs = append(revs, search.RevisionSpecifier{RevSpec: vcRepoRev.Rev})
-				}
-			}
-		} else if len(searchContextRepositoryRevisions) > 0 {
-			for _, repositoryRevisions := range searchContextRepositoryRevisions {
-				if repo.ID == repositoryRevisions.Repo.ID {
-					repoRev.Repo = repo
-					revs = repositoryRevisions.Revs
-					break
-				}
-			}
-		} else {
-			var clashingRevs []search.RevisionSpecifier
-			revs, clashingRevs = getRevsForMatchedRepo(repo.Name, includePatternRevs)
-			repoRev.Repo = repo
-			// if multiple specified revisions clash, report this usefully:
-			if len(revs) == 0 && clashingRevs != nil {
-				missingRepoRevs = append(missingRepoRevs, &search.RepositoryRevisions{
-					Repo: repo,
-					Revs: clashingRevs,
-				})
-			}
+	if versionContext != nil {
+		for _, vcRepoRev := range versionContext.Revisions {
+			revs = append(revs, search.RevisionSpecifier{RevSpec: vcRepoRev.Rev})
+		}
+	}
+
+	for _, r := range includePatternRevs {
+		revs = append(revs, r.revs...)
+	}
+
+	// Check if the repository actually has the revisions that the user specified.
+	for _, rev := range revs {
+		if rev.RevSpec == "" || rev.RefGlob != "" || rev.ExcludeRefGlob != "" { // fast path
+			// skip default branch resolution to save time
+			// Do not validate ref patterns. A ref pattern matching 0 refs is not necessarily
+			// invalid, so it's not clear what validation would even mean.
+			revRepos[rev] = repos
+			continue
 		}
 
-		// We do in place filtering to reduce allocations. Common path is no
-		// filtering of revs.
-		if len(revs) > 0 {
-			repoRev.Revs = revs[:0]
-		}
-
-		// Check if the repository actually has the revisions that the user specified.
-		for _, rev := range revs {
-			if rev.RefGlob != "" || rev.ExcludeRefGlob != "" {
-				// Do not validate ref patterns. A ref pattern matching 0 refs is not necessarily
-				// invalid, so it's not clear what validation would even mean.
-				repoRev.Revs = append(repoRev.Revs, rev)
-				continue
-			}
-			if rev.RevSpec == "" { // skip default branch resolution to save time
-				repoRev.Revs = append(repoRev.Revs, rev)
-				continue
-			}
-
+		// slow path
+		for _, repo := range repos {
 			// Validate the revspec.
 			// Do not trigger a repo-updater lookup (e.g.,
 			// backend.{GitRepo,Repos.ResolveRev}) because that would slow this operation
@@ -274,7 +247,7 @@ func (r *Resolver) Resolve(ctx context.Context, op search.RepoOptions) (Resolved
 			// taking a long time because they all ask gitserver to try to fetch from the remote
 			// repo.
 			trimmedRefSpec := strings.TrimPrefix(rev.RevSpec, "^") // handle negated revisions, such as ^<branch>, ^<tag>, or ^<commit>
-			if _, err := git.ResolveRevision(ctx, repoRev.GitserverRepo(), trimmedRefSpec, git.ResolveRevisionOptions{NoEnsureRevision: true}); err != nil {
+			if _, err := git.ResolveRevision(ctx, repo.Name, trimmedRefSpec, git.ResolveRevisionOptions{NoEnsureRevision: true}); err != nil {
 				if errors.Is(err, context.DeadlineExceeded) {
 					return Resolved{}, context.DeadlineExceeded
 				}
@@ -287,36 +260,33 @@ func (r *Resolver) Resolve(ctx context.Context, op search.RepoOptions) (Resolved
 						// Report as HEAD not "" (empty string) to avoid user confusion.
 						rev.RevSpec = "HEAD"
 					}
-					missingRepoRevs = append(missingRepoRevs, &search.RepositoryRevisions{
-						Repo: repo,
-						Revs: []search.RevisionSpecifier{{RevSpec: rev.RevSpec}},
-					})
+					missingRevRepos[rev] = append(missingRevRepos[rev], repo)
 				}
 				// If err != nil and is not one of the err values checked for above, cloning and other errors will be handled later, so just ignore an error
 				// if there is one.
 				continue
 			}
-			repoRev.Revs = append(repoRev.Revs, rev)
+
+			revRepos[rev] = append(revRepos[rev], repo)
 		}
-		repoRevs = append(repoRevs, &repoRev)
-		repoSet[repoRev.Repo.ID] = repoRev.Repo
 	}
 
 	tr.LazyPrintf("Associate/validate revs - done")
 
 	if op.CommitAfter != "" {
 		start := time.Now()
-		before := len(repoRevs)
-		repoRevs, err = filterRepoHasCommitAfter(ctx, repoRevs, op.CommitAfter)
-		tr.LazyPrintf("repohascommitafter removed %d repos in %s", before-len(repoRevs), time.Since(start))
+		before := len(revs)
+		// TODO(fixme)
+		// revs, err = filterRepoHasCommitAfter(ctx, revs, op.CommitAfter)
+		tr.LazyPrintf("repohascommitafter removed %d repos in %s", before-len(revs), time.Since(start))
 	}
 
 	return Resolved{
-		RepoRevs:        repoRevs,
-		RepoSet:         repoSet,
-		MissingRepoRevs: missingRepoRevs,
-		ExcludedRepos:   excluded,
-		OverLimit:       overLimit,
+		Repos:         repos,
+		Revs:          revRepos,
+		MissingRevs:   missingRevRepos,
+		ExcludedRepos: excluded,
+		OverLimit:     overLimit,
 	}, err
 }
 

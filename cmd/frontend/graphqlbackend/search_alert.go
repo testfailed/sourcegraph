@@ -14,6 +14,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/go-multierror"
 	"github.com/inconshreveable/log15"
+	"github.com/sourcegraph/sourcegraph/internal/types"
 
 	"github.com/sourcegraph/sourcegraph/cmd/frontend/backend"
 	"github.com/sourcegraph/sourcegraph/cmd/frontend/envvar"
@@ -114,7 +115,7 @@ func (r *searchResolver) reposExist(ctx context.Context, options search.RepoOpti
 		SearchableReposFunc: backend.Repos.ListSearchable,
 	}
 	resolved, err := repositoryResolver.Resolve(ctx, options)
-	return err == nil && len(resolved.RepoRevs) > 0
+	return err == nil && len(resolved.Repos) > 0
 }
 
 func (r *searchResolver) alertForNoResolvedRepos(ctx context.Context, q query.Q) *searchAlert {
@@ -298,10 +299,10 @@ func (r *searchResolver) errorForOverRepoLimit(ctx context.Context) *errOverRepo
 
 	repoOptions := r.toRepoOptions(r.Query, resolveRepositoriesOpts{})
 	resolved, _ := r.resolveRepositories(ctx, repoOptions)
-	if len(resolved.RepoRevs) > 0 {
-		paths := make([]string, len(resolved.RepoRevs))
-		for i, repo := range resolved.RepoRevs {
-			paths[i] = string(repo.Repo.Name)
+	if len(resolved.Repos) > 0 {
+		paths := make([]string, len(resolved.Repos))
+		for i, repo := range resolved.Repos {
+			paths[i] = string(repo.Name)
 		}
 
 		// See if we can narrow it down by using filters like
@@ -390,45 +391,46 @@ func alertForStructuralSearchNotSet(queryString string) *searchAlert {
 }
 
 type missingRepoRevsError struct {
-	Missing []*search.RepositoryRevisions
+	Missing map[search.RevisionSpecifier][]types.RepoName
 }
 
 func (*missingRepoRevsError) Error() string {
 	return "missing repo revs"
 }
 
-func alertForMissingRepoRevs(missingRepoRevs []*search.RepositoryRevisions) *searchAlert {
-	var description string
-	if len(missingRepoRevs) == 1 {
-		if len(missingRepoRevs[0].RevSpecs()) == 1 {
-			description = fmt.Sprintf("The repository %s matched by your repo: filter could not be searched because it does not contain the revision %q.", missingRepoRevs[0].Repo.Name, missingRepoRevs[0].RevSpecs()[0])
-		} else {
-			description = fmt.Sprintf("The repository %s matched by your repo: filter could not be searched because it has multiple specified revisions: @%s.", missingRepoRevs[0].Repo.Name, strings.Join(missingRepoRevs[0].RevSpecs(), ","))
-		}
-	} else {
-		sampleSize := 10
-		if sampleSize > len(missingRepoRevs) {
-			sampleSize = len(missingRepoRevs)
-		}
-		repoRevs := make([]string, 0, sampleSize)
-		for _, r := range missingRepoRevs[:sampleSize] {
-			repoRevs = append(repoRevs, string(r.Repo.Name)+"@"+strings.Join(r.RevSpecs(), ","))
-		}
-		b := strings.Builder{}
-		_, _ = fmt.Fprintf(&b, "%d repositories matched by your repo: filter could not be searched because the following revisions do not exist, or differ but were specified for the same repository:", len(missingRepoRevs))
-		for _, rr := range repoRevs {
-			_, _ = fmt.Fprintf(&b, "\n* %s", rr)
-		}
-		if sampleSize < len(missingRepoRevs) {
-			b.WriteString("\n* ...")
-		}
-		description = b.String()
-	}
-	return &searchAlert{
-		prometheusType: "missing_repo_revs",
-		title:          "Some repositories could not be searched",
-		description:    description,
-	}
+func alertForMissingRepoRevs(missingRevs map[search.RevisionSpecifier][]types.RepoName) *searchAlert {
+	return nil
+	//var description string
+	//if len(missingRevs) == 1 {
+	//	if len(missingRevs[0].RevSpecs()) == 1 {
+	//		description = fmt.Sprintf("The repository %s matched by your repo: filter could not be searched because it does not contain the revision %q.", missingRepoRevs[0].Repo.Name, missingRepoRevs[0].RevSpecs()[0])
+	//	} else {
+	//		description = fmt.Sprintf("The repository %s matched by your repo: filter could not be searched because it has multiple specified revisions: @%s.", missingRepoRevs[0].Repo.Name, strings.Join(missingRepoRevs[0].RevSpecs(), ","))
+	//	}
+	//} else {
+	//	sampleSize := 10
+	//	if sampleSize > len(missingRevs) {
+	//		sampleSize = len(missingRevs)
+	//	}
+	//	repoRevs := make([]string, 0, sampleSize)
+	//	for _, r := range missingRevs[:sampleSize] {
+	//		repoRevs = append(repoRevs, string(r.Repo.Name)+"@"+strings.Join(r.RevSpecs(), ","))
+	//	}
+	//	b := strings.Builder{}
+	//	_, _ = fmt.Fprintf(&b, "%d repositories matched by your repo: filter could not be searched because the following revisions do not exist, or differ but were specified for the same repository:", len(missingRepoRevs))
+	//	for _, rr := range repoRevs {
+	//		_, _ = fmt.Fprintf(&b, "\n* %s", rr)
+	//	}
+	//	if sampleSize < len(missingRepoRevs) {
+	//		b.WriteString("\n* ...")
+	//	}
+	//	description = b.String()
+	//}
+	//return &searchAlert{
+	//	prometheusType: "missing_repo_revs",
+	//	title:          "Some repositories could not be searched",
+	//	description:    description,
+	//}
 }
 
 // pathParentsByFrequency returns the most common path parents of the given paths.
@@ -505,8 +507,9 @@ func alertForError(err error) *searchAlert {
 	)
 
 	if errors.As(err, &mErr) {
-		alert = alertForMissingRepoRevs(mErr.Missing)
-		alert.priority = 6
+		// TODO(fixme)
+		// alert = alertForMissingRepoRevs(mErr.Missing)
+		// alert.priority = 6
 	} else if strings.Contains(err.Error(), "Worker_oomed") || strings.Contains(err.Error(), "Worker_exited_abnormally") {
 		alert = &searchAlert{
 			prometheusType: "structural_search_needs_more_memory",

@@ -172,11 +172,11 @@ type TextParameters struct {
 	ResultTypes result.Types
 	Timeout     time.Duration
 
-	Repos []*RepositoryRevisions
+	Repos, UserPrivateRepos []types.RepoName
 
-	// perf: For global queries, we only resolve private repos.
-	UserPrivateRepos []types.RepoName
-	Mode             GlobalSearchMode
+	Revs, MissingRevs map[RevisionSpecifier][]types.RepoName
+
+	Mode GlobalSearchMode
 
 	// Query is the parsed query from the user. You should be using Pattern
 	// instead, but Query is useful for checking extra fields that are set and

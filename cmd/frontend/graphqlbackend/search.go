@@ -286,7 +286,7 @@ func (r *searchResolver) resolveRepositories(ctx context.Context, options search
 		// hit the database once.
 		r.reposMu.Lock()
 		defer r.reposMu.Unlock()
-		if r.resolved.RepoRevs != nil || r.resolved.MissingRepoRevs != nil || r.repoErr != nil {
+		if len(r.resolved.Repos) > 0 || r.resolved.Revs != nil || r.resolved.MissingRevs != nil || r.repoErr != nil {
 			tr.LazyPrintf("cached")
 			return *r.resolved, r.repoErr
 		}
@@ -344,7 +344,7 @@ func (r *searchResolver) suggestFilePaths(ctx context.Context, limit int) ([]Sea
 		return nil, nil
 	}
 
-	args.Repos = resolved.RepoRevs
+	args.Repos = resolved.Repos
 
 	fileMatches, _, err := unindexed.SearchFilesInReposBatch(ctx, &args)
 	if err != nil {

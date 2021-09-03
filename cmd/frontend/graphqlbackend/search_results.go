@@ -461,7 +461,6 @@ func (r *searchResolver) toRepoOptions(q query.Q, opts resolveRepositoriesOpts) 
 	repoFilters, minusRepoFilters := q.Repositories()
 	if opts.effectiveRepoFieldValues != nil {
 		repoFilters = opts.effectiveRepoFieldValues
-
 	}
 	repoGroupFilters, _ := q.StringValues(query.FieldRepoGroup)
 
@@ -818,8 +817,11 @@ func (r *searchResolver) evaluateOr(ctx context.Context, q query.Basic) (*Search
 // subexpressions that require resolving potentially disjoint repository data.
 func (r *searchResolver) invalidateCache() {
 	if r.invalidateRepoCache {
-		r.resolved.RepoRevs = nil
-		r.resolved.MissingRepoRevs = nil
+		r.resolved.Repos = nil
+		r.resolved.Revs = nil
+		r.resolved.MissingRevs = nil
+		r.resolved.OverLimit = false
+		r.resolved.ExcludedRepos = searchrepos.ExcludedRepos{}
 		r.repoErr = nil
 	}
 }
@@ -1534,20 +1536,21 @@ func (r *searchResolver) doResults(ctx context.Context, args *search.TextParamet
 		}
 		return nil, err
 	}
-	args.Repos = resolved.RepoRevs
+	args.Repos = resolved.Repos
 
-	tr.LazyPrintf("searching %d repos, %d missing", len(args.Repos), len(resolved.MissingRepoRevs))
+	tr.LazyPrintf("searching %d repos, %d missing", len(args.Repos), len(resolved.MissingRevs))
 	if len(args.Repos) == 0 {
 		return r.alertForNoResolvedRepos(ctx, args.Query).wrapResults(), nil
 	}
 
-	if len(resolved.MissingRepoRevs) > 0 {
-		agg.Error(&missingRepoRevsError{Missing: resolved.MissingRepoRevs})
+	if len(resolved.MissingRevs) > 0 {
+		agg.Error(&missingRepoRevsError{Missing: resolved.MissingRevs})
 	}
 
 	agg.Send(streaming.SearchEvent{
 		Stats: streaming.Stats{
-			Repos:            resolved.RepoSet,
+			// TODO(fixme)!
+			// Repos:            resolved.RepoSet,
 			ExcludedForks:    resolved.ExcludedRepos.Forks,
 			ExcludedArchived: resolved.ExcludedRepos.Archived,
 		},
