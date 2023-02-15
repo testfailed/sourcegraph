@@ -107,7 +107,7 @@ require (
 	github.com/peterbourgon/ff v1.7.0
 	github.com/peterhellberg/link v1.1.0
 	github.com/prometheus/alertmanager v0.22.2
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/common v0.30.0
 	github.com/qustavo/sqlhooks/v2 v2.1.0
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be
