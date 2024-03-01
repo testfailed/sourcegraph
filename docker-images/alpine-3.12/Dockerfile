@@ -1,7 +1,7 @@
 # This Dockerfile defines the sourcegraph/alpine Docker image, which is the
 # base image used by all Sourcegraph Docker images.
 
-FROM alpine:3.12@sha256:a9c28c813336ece5bb98b36af5b66209ed777a394f4f856c6e62267790883820
+FROM alpine:3.12@sha256:cb64bbe7fa613666c234e1090e91427314ee18ec6420e9426cf4e7f314056813
 
 LABEL org.opencontainers.image.url=https://sourcegraph.com/
 LABEL org.opencontainers.image.source=https://github.com/sourcegraph/sourcegraph/
