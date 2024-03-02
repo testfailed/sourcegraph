@@ -110,7 +110,7 @@
     "@octokit/rest": "^16.36.0",
     "@peculiar/webcrypto": "^1.1.7",
     "@percy/puppeteer": "^1.1.0",
-    "@pmmmwh/react-refresh-webpack-plugin": "0.5.0-rc.1",
+    "@pmmmwh/react-refresh-webpack-plugin": "0.5.11",
     "@pollyjs/adapter": "^5.0.0",
     "@pollyjs/core": "^5.1.0",
     "@pollyjs/persister-fs": "^5.0.0",
